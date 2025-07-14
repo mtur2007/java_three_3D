@@ -336,44 +336,129 @@ function createTrack(curve, color = 0x333333) {
 }
 
 // 車両設定（テクスチャ対応版）
-function TrainSettings(length, color, cars, transparency = 1, texturePath = null) {
+// function TrainSettings(length, color, cars, transparency = 1, texturePath = null) {
 
+//   const geo = new THREE.BoxGeometry(1, 1, length);
+//   let baseMaterial;
+
+//   // テクスチャ指定がある場合
+//   if (texturePath) {
+//     const texture = new THREE.TextureLoader().load(texturePath);
+//     texture.wrapS = THREE.RepeatWrapping;
+//     texture.wrapT = THREE.RepeatWrapping;
+
+//     texture.repeat.set(1, 1); // 必要に応じて調整
+//     texture.colorSpace = THREE.SRGBColorSpace;
+
+//     baseMaterial = new THREE.MeshStandardMaterial({
+//       map: texture,
+//       transparent: true,
+//       opacity: transparency
+//     });
+//   } else {
+//     // 通常の単色マテリアル
+//     baseMaterial = new THREE.MeshStandardMaterial({
+//       color: color,
+//       transparent: true,
+//       opacity: transparency
+//     });
+//   }
+
+//   const trainCars = [];
+
+//   for (let i = 0; i < cars; i++) {
+//     const car = new THREE.Mesh(geo, baseMaterial.clone());
+//     trainCars.push(car);
+//     scene.add(car);
+//   }
+
+//   return trainCars;
+// }
+
+function TrainSettings(
+  length,
+  color,
+  cars,
+  transparency = 1,
+  textureHead = {},
+  textureMiddle = {},
+  textureTail = {}
+) {
   const geo = new THREE.BoxGeometry(1, 1, length);
-  let baseMaterial;
+  const loader = new THREE.TextureLoader();
 
-  // テクスチャ指定がある場合
-  if (texturePath) {
-    const texture = new THREE.TextureLoader().load(texturePath);
+  // テクスチャ読み込みヘルパー
+  function loadTexture(path) {
+    const texture = loader.load(path);
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
-
-    texture.repeat.set(1, 1); // 必要に応じて調整
     texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  }
 
-    baseMaterial = new THREE.MeshStandardMaterial({
-      map: texture,
-      transparent: true,
-      opacity: transparency
-    });
-  } else {
-    // 通常の単色マテリアル
-    baseMaterial = new THREE.MeshStandardMaterial({
-      color: color,
-      transparent: true,
-      opacity: transparency
-    });
+  // 指定されたテクスチャセットをもとにマテリアル6面分を生成
+  function createMaterials(set) {
+    const sideRightMat = set.side_right
+      ? new THREE.MeshStandardMaterial({ map: loadTexture(set.side_right), transparent: true, opacity: transparency })
+      : set.side
+        ? new THREE.MeshStandardMaterial({ map: loadTexture(set.side), transparent: true, opacity: transparency })
+        : new THREE.MeshStandardMaterial({ color, transparent: true, opacity: transparency });
+
+    const sideLeftMat = set.side_left
+      ? new THREE.MeshStandardMaterial({ map: loadTexture(set.side_left), transparent: true, opacity: transparency }) // 反転なし
+      : set.side
+        ? new THREE.MeshStandardMaterial({ map: loadTexture(set.side), transparent: true, opacity: transparency })
+        : sideRightMat.clone();
+
+    const topMat = set.top
+      ? new THREE.MeshStandardMaterial({ map: loadTexture(set.top), transparent: true, opacity: transparency })
+      : new THREE.MeshStandardMaterial({ color, transparent: true, opacity: transparency });
+
+    const bottomMat = set.bottom
+      ? new THREE.MeshStandardMaterial({ map: loadTexture(set.bottom), transparent: true, opacity: transparency })
+      : topMat.clone();
+
+    const frontMat = set.front
+      ? new THREE.MeshStandardMaterial({ map: loadTexture(set.front), transparent: true, opacity: transparency })
+      : new THREE.MeshStandardMaterial({ color, transparent: true, opacity: transparency });
+
+    const backMat = set.back
+      ? new THREE.MeshStandardMaterial({ map: loadTexture(set.back), transparent: true, opacity: transparency })
+      : new THREE.MeshStandardMaterial({ color, transparent: true, opacity: transparency });
+
+    // 面の順番：[右, 左, 上, 下, 前, 後]
+    return [
+      sideRightMat,  // +X
+      sideLeftMat,   // -X
+      topMat,        // +Y
+      bottomMat,     // -Y
+      frontMat,      // +Z
+      backMat        // -Z
+    ];
   }
 
   const trainCars = [];
 
   for (let i = 0; i < cars; i++) {
-    const car = new THREE.Mesh(geo, baseMaterial.clone());
+    let textureSet;
+
+    if (i === 0 && Object.keys(textureHead).length > 0) {
+      textureSet = textureHead;
+    } else if (i === cars - 1 && Object.keys(textureTail).length > 0) {
+      textureSet = textureTail;
+    } else {
+      textureSet = textureMiddle;
+    }
+
+    const materials = createMaterials(textureSet);
+    const car = new THREE.Mesh(geo, materials.map(m => m.clone()));
     trainCars.push(car);
     scene.add(car);
   }
 
   return trainCars;
 }
+
 
 // --- アニメーション ---
 
@@ -668,15 +753,89 @@ const track4_doors = placePlatformDoors(track4, 0.9, door_interval, 'right');  /
 const max_speed = 0.001 // 制限速度(最高)
 const add_speed = 0.0000015 // 追加速度(加速/減速)
 
-const Train_1 = TrainSettings(train_width,0x00676E,12,1,'textures/cyuou.png')
-const Train_4 = TrainSettings(train_width,0x00676E,12,1,'textures/cyuou.png')
+const Train_1 = TrainSettings(
+  train_width,
+  0x888888,
+  10,
+  1,
+  {
+    side_right: 'textures/tyuou_1.png',
+    side_left: 'textures/tyuou_3.png',
+    front:  'textures/tyuou_2.png',
+  },
+  {
+    side: 'textures/tyuou.png',
+  },
+  { 
+    side_right: 'textures/tyuou_3.png',
+    side_left: 'textures/tyuou_1.png',
+    back:  'textures/tyuou_2.png',
+  }
+);
+
+const Train_4 = TrainSettings(
+  train_width,
+  0x888888,
+  10,
+  1,
+  {
+    side_right: 'textures/tyuou_1.png',
+    side_left: 'textures/tyuou_3.png',
+    front:  'textures/tyuou_2.png',
+  },
+  {
+    side: 'textures/tyuou.png',
+  },
+  { 
+    side_right: 'textures/tyuou_3.png',
+    side_left: 'textures/tyuou_1.png',
+    back:  'textures/tyuou_2.png',
+  }
+);
 
 const reversedCurve_4 = new THREE.CatmullRomCurve3(
   line_4.getPoints(100).reverse()
 );
 
-const Train_2 = TrainSettings(train_width,0x00676E,10,1,'textures/soubu.png')
-const Train_3 = TrainSettings(train_width,0x00676E,10,1,'textures/soubu.png')
+const Train_2 = TrainSettings(
+  train_width,
+  0x888888,
+  10,
+  1,
+  {
+    side_right: 'textures/soubu_1.png',
+    side_left: 'textures/soubu_4.png',
+    front:  'textures/soubu_3.png',
+  },
+  {
+    side: 'textures/soubu.png',
+  },
+  {
+    side_right: 'textures/soubu_4.png',
+    side_left: 'textures/soubu_1.png',
+    back:  'textures/soubu_3.png',
+  }
+);
+
+const Train_3 = TrainSettings(
+  train_width,
+  0x888888,
+  10,
+  1,
+  {
+    side_right: 'textures/soubu_1.png',
+    side_left: 'textures/soubu_4.png',
+    front:  'textures/soubu_3.png',
+  },
+  {
+    side: 'textures/soubu.png',
+  },
+  {
+    side_right: 'textures/soubu_4.png',
+    side_left: 'textures/soubu_1.png',
+    back:  'textures/soubu_3.png',
+  }
+);
 
 const reversedCurve_3 = new THREE.CatmullRomCurve3(
   line_3.getPoints(100).reverse()
@@ -814,7 +973,7 @@ if (true) {
   const metalParams_2 = {
     color: 0xffffff,      // 暗めのグレー（鉄色）
     metalness: 0.5,       // 金属光沢最大
-    roughness: 0.0,      // 少しザラザラ（低くするとツルツル）
+    roughness: 0.0,       // 少しザラザラ（低くするとツルツル）
     side: THREE.DoubleSide,
   };
 
@@ -853,9 +1012,9 @@ if (true) {
   const ceiling = new THREE.InstancedMesh(geometry, material, 6);
 
   // 7. 柱
-  const radiusTop = 0.3;    // 上面の半径
-  const radiusBottom = 0.3; // 下面の半径
-  const height = 3;       // 高さ
+  const radiusTop = 0.3;     // 上面の半径
+  const radiusBottom = 0.3;  // 下面の半径
+  const height = 3;          // 高さ
   const radialSegments = 32; // 円周方向の分割数
 
   geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, radialSegments);
@@ -865,8 +1024,8 @@ if (true) {
   // 8. 支柱
   const radiusTop_2 = 0.01;    // 上面の半径
   const radiusBottom_2 = 0.01; // 下面の半径
-  const height_2 = 0.5;       // 高さ
-  const radialSegments_2 = 5; // 円周方向の分割数
+  const height_2 = 0.5;        // 高さ
+  const radialSegments_2 = 5;  // 円周方向の分割数
 
   geometry = new THREE.CylinderGeometry(radiusTop_2, radiusBottom_2, height_2, radialSegments_2);
   material = new THREE.MeshStandardMaterial({...metalParams_2});
@@ -902,8 +1061,8 @@ if (true) {
       // スケールの更新
       if (!Number.isNaN(scale)) dummy.scale.setScalar(scale);
 
-      dummy.updateMatrix();              // 行列計算更新
-      ins_obj.setMatrixAt(ins_idx, dummy.matrix);  // i番目のインスタンスに行列を適用
+      dummy.updateMatrix();                       // 行列計算更新
+      ins_obj.setMatrixAt(ins_idx, dummy.matrix); // i番目のインスタンスに行列を適用
       ins_obj.instanceMatrix.needsUpdate = true;  // 更新フラグ
     }
 
@@ -915,27 +1074,25 @@ if (true) {
     return light;
   }  
 
-  // createSpotLight(0xffffff, 1, [0, 10, 0], [0,0,0]);
-
   let beam_y = 9.5
   let beam_z = 10
-  object_update({ins_obj: beam_pillar, ins_idx: 0, pos_x: 5.5,    pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
+  object_update({ins_obj: beam_pillar, ins_idx: 0, pos_x: 5.5,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
   object_update({ins_obj: beam_pillar, ins_idx: 1, pos_x: 3.5,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
   object_update({ins_obj: beam_pillar, ins_idx: 2, pos_x: 1.7,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam_pillar, ins_idx: 3, pos_x: 0.7,    pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam_pillar, ins_idx: 4, pos_x: -1.1,   pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
+  object_update({ins_obj: beam_pillar, ins_idx: 3, pos_x: 0.7,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
+  object_update({ins_obj: beam_pillar, ins_idx: 4, pos_x: -1.1, pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
   object_update({ins_obj: beam_pillar, ins_idx: 5, pos_x: -2.1, pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam_pillar, ins_idx: 6, pos_x: -4, pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
+  object_update({ins_obj: beam_pillar, ins_idx: 6, pos_x: -4,   pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
   object_update({ins_obj: beam_pillar, ins_idx: 7, pos_x: -4.5, pos_y: beam_y+0.5, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
 
   beam_y -= 0.5
-  object_update({ins_obj: beam, ins_idx: 0, pos_x: 5.5,    pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
+  object_update({ins_obj: beam, ins_idx: 0, pos_x: 5.5,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
   object_update({ins_obj: beam, ins_idx: 1, pos_x: 3.5,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
   object_update({ins_obj: beam, ins_idx: 2, pos_x: 1.7,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam, ins_idx: 3, pos_x: 0.7,    pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam, ins_idx: 4, pos_x: -1.1,   pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
+  object_update({ins_obj: beam, ins_idx: 3, pos_x: 0.7,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
+  object_update({ins_obj: beam, ins_idx: 4, pos_x: -1.1, pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
   object_update({ins_obj: beam, ins_idx: 5, pos_x: -2.1, pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam, ins_idx: 6, pos_x: -4, pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
+  object_update({ins_obj: beam, ins_idx: 6, pos_x: -4,   pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
   object_update({ins_obj: beam, ins_idx: 7, pos_x: -4.5, pos_y: beam_y+0.5, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
 
 
