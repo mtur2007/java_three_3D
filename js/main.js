@@ -558,6 +558,10 @@ Points_0 = [
 
   new THREE.Vector3(6, y, -50),
   new THREE.Vector3(4.8, y, -30),
+
+  // new THREE.Vector3(4.8, y, -20),
+  // new THREE.Vector3(4.8, y, 40),
+
   new THREE.Vector3(4.8, y, 50),     // お茶の水駅上空
   new THREE.Vector3(3,y, 90), // 高架にする（y = 5）
 ];
@@ -570,6 +574,10 @@ Points_1 = [
 
   new THREE.Vector3(3, y, -50),
   new THREE.Vector3(0.8, y, -30), 
+
+  // new THREE.Vector3(0.8, y, -20),
+  // new THREE.Vector3(0.8, y, 40),
+
   new THREE.Vector3(0.8, y, 50),
   new THREE.Vector3(-2, y, 90),
 ];
@@ -581,6 +589,10 @@ Points_2 = [
   new THREE.Vector3(16, y+3, -110),
   new THREE.Vector3(1, y, -50),
   new THREE.Vector3(-0.8, y, -30),
+
+  // new THREE.Vector3(-0.8, y, -20),
+  // new THREE.Vector3(-0.8, y, 40),
+
   new THREE.Vector3(-0.8, y, 50),     // お茶の水駅上空
   new THREE.Vector3(-4,y, 90), // 高架にする（y = 5）
 ];
@@ -592,6 +604,10 @@ Points_3 = [
   new THREE.Vector3(14, y-0.5, -105),
   new THREE.Vector3(-2, y, -50),
   new THREE.Vector3(-4.8, y, -30),
+  
+  // new THREE.Vector3(-4.8, y, -20),
+  // new THREE.Vector3(-4.8, y, 30),
+
   new THREE.Vector3(-4.8, y, 40),
   new THREE.Vector3(-9, y, 90),
 ];
@@ -796,37 +812,67 @@ if (true) {
     side: THREE.DoubleSide,
   };
 
+  // 鉄のような金属マテリアル設定
+  const metalParams_2 = {
+    color: 0xffffff,      // 暗めのグレー（鉄色）
+    metalness: 0.5,       // 金属光沢最大
+    roughness: 0.0,      // 少しザラザラ（低くするとツルツル）
+    side: THREE.DoubleSide,
+  };
+
   // 1. 天井本体（Mesh）
   const ceilingGeometry = new THREE.BoxGeometry(10, 0.1, 72);
   const ceilingMaterial = new THREE.MeshStandardMaterial({...metalParams});
   const ceilingMesh = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
 
+  let geometry = NaN
+  let material = NaN
+
   // 2. 柱（縦方向ビーム）
-  const geometry_1 = new THREE.BoxGeometry(0.1, 1, 72);
-  const material_1 = new THREE.MeshStandardMaterial({...metalParams});
-  const beam_pillar = new THREE.InstancedMesh(geometry_1, material_1, 8);
+  geometry = new THREE.BoxGeometry(0.1, 1, 72);
+  material = new THREE.MeshStandardMaterial({...metalParams});
+  const beam_pillar = new THREE.InstancedMesh(geometry, material, 8);
 
   // 3. 柱（横方向ビーム）
-  const geometry_2 = new THREE.BoxGeometry(0.1, 1, 10);
-  const material_2 = new THREE.MeshStandardMaterial({...metalParams});
+  geometry = new THREE.BoxGeometry(0.1, 1, 10);
+  material = new THREE.MeshStandardMaterial({...metalParams});
   const count = 54;
-  const beam_pillar_2 = new THREE.InstancedMesh(geometry_2, material_2, count);
+  const beam_pillar_2 = new THREE.InstancedMesh(geometry, material, count);
 
   // 4. 鉄骨梁（縦）
-  const geometry = new THREE.BoxGeometry(0.2, 0.1, 72);
-  const material = new THREE.MeshStandardMaterial({...metalParams});
+  geometry = new THREE.BoxGeometry(0.2, 0.1, 72);
+  material = new THREE.MeshStandardMaterial({...metalParams});
   const beam = new THREE.InstancedMesh(geometry, material, 7);
 
   // 5. 鉄骨梁（横）
-  const geometry_3 = new THREE.BoxGeometry(0.2, 0.1, 10);
-  const material_3 = new THREE.MeshStandardMaterial({...metalParams});
-  const beam_2 = new THREE.InstancedMesh(geometry_3, material_3, count);
+  geometry = new THREE.BoxGeometry(0.2, 0.1, 10);
+  material = new THREE.MeshStandardMaterial({...metalParams});
+  const beam_2 = new THREE.InstancedMesh(geometry, material, count);
 
   // 6. 小天井板（パーツ）
-  const geometry_4 = new THREE.BoxGeometry(1.5, 0.1, 10);
-  const material_4 = new THREE.MeshStandardMaterial({...metalParams});
-  const ceiling = new THREE.InstancedMesh(geometry_4, material_4, 6);
+  geometry = new THREE.BoxGeometry(1.5, 0.1, 10);
+  material = new THREE.MeshStandardMaterial({...metalParams});
+  const ceiling = new THREE.InstancedMesh(geometry, material, 6);
 
+  // 7. 柱
+  const radiusTop = 0.3;    // 上面の半径
+  const radiusBottom = 0.3; // 下面の半径
+  const height = 3;       // 高さ
+  const radialSegments = 32; // 円周方向の分割数
+
+  geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, radialSegments);
+  material = new THREE.MeshStandardMaterial({...metalParams});
+  const cylinder = new THREE.InstancedMesh(geometry, material, 12);
+  
+  // 7. 柱
+  const radiusTop_2 = 0.01;    // 上面の半径
+  const radiusBottom_2 = 0.01; // 下面の半径
+  const height_2 = 0.5;       // 高さ
+  const radialSegments_2 = 5; // 円周方向の分割数
+
+  geometry = new THREE.CylinderGeometry(radiusTop_2, radiusBottom_2, height_2, radialSegments_2);
+  material = new THREE.MeshStandardMaterial({...metalParams_2});
+  const prop = new THREE.InstancedMesh(geometry, material, 376);
 
   function object_update({
     ins_obj = NaN,
@@ -884,15 +930,30 @@ if (true) {
   for (let i = 0; i < 49; i++) {
     object_update({ins_obj: beam_pillar_2, ins_idx: i, pos_x: 0.5, pos_y: beam_y, pos_z: beam_z-36 + i*1.5, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
     object_update({ins_obj: beam_2, ins_idx: i, pos_x: 0.5, pos_y: beam_y-0.5, pos_z: beam_z-36 + i*1.5, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    1.5
   }
 
   for (let i = 0; i < 6; i++) {
-    object_update({ins_obj: ceiling, ins_idx: i, pos_x: 0.5, pos_y: beam_y-0.5, pos_z: beam_z-36+1.5/2*3 + i*1.5 * 9, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    2.25
+    object_update({ins_obj: ceiling,  ins_idx: i, pos_x: 0.5, pos_y: beam_y-0.5, pos_z: beam_z-36+1.5/2*3 + i*1.5 * 9, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: cylinder, ins_idx: i*2, pos_x: 2.55, pos_y: beam_y-1.5, pos_z: beam_z-36+1.5/2*3 + i*1.5 * 9, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: cylinder, ins_idx: i*2+1, pos_x: -3, pos_y: beam_y-1.5, pos_z: beam_z-36+1.5/2*3 + i*1.5 * 9, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
   }
 
-  1.
+  const padding = 1.5
+  for (let i = 0; i < 47; i++){
+    // 3.5
+    object_update({ins_obj: prop, ins_idx: i*8,   pos_x: 3.55, pos_y: beam_y-0.75, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: prop, ins_idx: i*8+1, pos_x: 3.45, pos_y: beam_y-0.75, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    // 1.7
+    object_update({ins_obj: prop, ins_idx: i*8+2, pos_x: 1.75, pos_y: beam_y-0.75, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: prop, ins_idx: i*8+3, pos_x: 1.65, pos_y: beam_y-0.75, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    // -2.1
+    object_update({ins_obj: prop, ins_idx: i*8+4, pos_x: -2.15, pos_y: beam_y-0.75, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: prop, ins_idx: i*8+5, pos_x: -2.05, pos_y: beam_y-0.75, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    // -4
+    object_update({ins_obj: prop, ins_idx: i*8+6, pos_x: -3.95, pos_y: beam_y-0.75, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: prop, ins_idx: i*8+7, pos_x: -4.05, pos_y: beam_y-0.75, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+  }
+
 
   // 4. 配置（位置の設定）
   ceilingMesh.position.set(0.5, beam_y+0.5, beam_z); // 高さ12に配置（天井）
@@ -905,5 +966,8 @@ if (true) {
 
   scene.add(beam_pillar_2);
   scene.add(beam_2);
+
+  scene.add(cylinder);
+  scene.add(prop);
 
 }
