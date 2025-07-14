@@ -1,5 +1,7 @@
-## 3Dジオラマ製作中
-https://mtur2007.github.io/java_three_3D/
+## 3Dジオラマ製作中 
+>  ジオラマは現在改修中の **JR御茶ノ水駅** の **改修後の姿** を再現しています。
+
+マップへのアクセスはこちら ▷ https://mtur2007.github.io/java_three_3D/
 
 ---
 
