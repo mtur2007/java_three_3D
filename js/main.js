@@ -476,8 +476,6 @@ function runTrain(trainCars, root, track_doors, door_interval, max_speed=0.002, 
         console.log("発車")
       }
     }
-    
-    renderer.render(scene, camera);
     requestAnimationFrame(runCar);
   }
   runCar();
