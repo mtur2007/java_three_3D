@@ -862,7 +862,7 @@ if (true) {
   material = new THREE.MeshStandardMaterial({...metalParams});
   const cylinder = new THREE.InstancedMesh(geometry, material, 12);
   
-  // 7. 柱
+  // 8. 支柱
   const radiusTop_2 = 0.01;    // 上面の半径
   const radiusBottom_2 = 0.01; // 下面の半径
   const height_2 = 0.5;       // 高さ
@@ -871,6 +871,11 @@ if (true) {
   geometry = new THREE.CylinderGeometry(radiusTop_2, radiusBottom_2, height_2, radialSegments_2);
   material = new THREE.MeshStandardMaterial({...metalParams_2});
   const prop = new THREE.InstancedMesh(geometry, material, 376);
+
+  // 6. 小天井板（パーツ）
+  geometry = new THREE.BoxGeometry(70, 0.04, 0.3);
+  material = new THREE.MeshStandardMaterial({...metalParams});
+  const board = new THREE.InstancedMesh(geometry, material, 4);
 
   function object_update({
     ins_obj = NaN,
@@ -901,7 +906,17 @@ if (true) {
       ins_obj.setMatrixAt(ins_idx, dummy.matrix);  // i番目のインスタンスに行列を適用
       ins_obj.instanceMatrix.needsUpdate = true;  // 更新フラグ
     }
-  
+
+  // 光源の追加
+  function createPointLight(color = 0xffffff, intensity = 1, distance = 100, position = [0, 10, 0]) {
+    const light = new THREE.PointLight(color, intensity, distance);
+    light.position.set(...position);
+    scene.add(light);
+    return light;
+  }  
+
+  // createSpotLight(0xffffff, 1, [0, 10, 0], [0,0,0]);
+
   let beam_y = 9.5
   let beam_z = 10
   object_update({ins_obj: beam_pillar, ins_idx: 0, pos_x: 5.5,    pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
@@ -934,24 +949,34 @@ if (true) {
     object_update({ins_obj: ceiling,  ins_idx: i, pos_x: 0.5, pos_y: beam_y-0.5, pos_z: beam_z-36+1.5/2*3 + i*1.5 * 9, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
     object_update({ins_obj: cylinder, ins_idx: i*2, pos_x: 2.55, pos_y: beam_y-1.5, pos_z: beam_z-36+1.5/2*3 + i*1.5 * 9, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
     object_update({ins_obj: cylinder, ins_idx: i*2+1, pos_x: -3, pos_y: beam_y-1.5, pos_z: beam_z-36+1.5/2*3 + i*1.5 * 9, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    createPointLight(0xffffff, 2, 10, [2.55, beam_y-1.05, beam_z-37.125 + 6.75 + i*1.5 * 9]);
+    createPointLight(0xffffff, 2, 10, [2.55, beam_y-1.05, beam_z-37.125 + 13.5 + i*1.5 * 9]);
+    createPointLight(0xffffff, 2, 10, [-3, beam_y-1.05, beam_z-37.125 + 6.75 + i*1.5 * 9]);
+    createPointLight(0xffffff, 2, 10, [-3, beam_y-1.05, beam_z-37.125 + 13.5 + i*1.5 * 9]);
   }
 
   const padding = 1.5
   for (let i = 0; i < 47; i++){
     // 3.5
-    object_update({ins_obj: prop, ins_idx: i*8,   pos_x: 3.55, pos_y: beam_y-0.75, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: prop, ins_idx: i*8+1, pos_x: 3.45, pos_y: beam_y-0.75, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: prop, ins_idx: i*8,   pos_x: 3.55, pos_y: beam_y-0.8, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: prop, ins_idx: i*8+1, pos_x: 3.45, pos_y: beam_y-0.8, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
     // 1.7
-    object_update({ins_obj: prop, ins_idx: i*8+2, pos_x: 1.75, pos_y: beam_y-0.75, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: prop, ins_idx: i*8+3, pos_x: 1.65, pos_y: beam_y-0.75, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: prop, ins_idx: i*8+2, pos_x: 1.75, pos_y: beam_y-0.8, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: prop, ins_idx: i*8+3, pos_x: 1.65, pos_y: beam_y-0.8, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
     // -2.1
-    object_update({ins_obj: prop, ins_idx: i*8+4, pos_x: -2.15, pos_y: beam_y-0.75, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: prop, ins_idx: i*8+5, pos_x: -2.05, pos_y: beam_y-0.75, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: prop, ins_idx: i*8+4, pos_x: -2.15, pos_y: beam_y-0.8, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: prop, ins_idx: i*8+5, pos_x: -2.05, pos_y: beam_y-0.8, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
     // -4
-    object_update({ins_obj: prop, ins_idx: i*8+6, pos_x: -3.95, pos_y: beam_y-0.75, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: prop, ins_idx: i*8+7, pos_x: -4.05, pos_y: beam_y-0.75, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: prop, ins_idx: i*8+6, pos_x: -3.95, pos_y: beam_y-0.8, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: prop, ins_idx: i*8+7, pos_x: -4.05, pos_y: beam_y-0.8, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
   }
 
+  for (let i = 0; i < 4; i++){
+    object_update({ins_obj: board, ins_idx: i*4,   pos_x: 3.5,  pos_y: beam_y-1.05, pos_z: beam_z, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: board, ins_idx: i*4+1, pos_x: 1.7,  pos_y: beam_y-1.05, pos_z: beam_z, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: board, ins_idx: i*4+2, pos_x: -2.1, pos_y: beam_y-1.05, pos_z: beam_z, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: board, ins_idx: i*4+3, pos_x: -4,   pos_y: beam_y-1.05, pos_z: beam_z, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+  }
 
   // 4. 配置（位置の設定）
   ceilingMesh.position.set(0.5, beam_y+0.5, beam_z); // 高さ12に配置（天井）
@@ -967,5 +992,6 @@ if (true) {
 
   scene.add(cylinder);
   scene.add(prop);
+  scene.add(board)
 
 }
