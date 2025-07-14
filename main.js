@@ -1,43 +1,25 @@
 // --- 基本設定 ---
 console.log('run')
 
-// Three.js本体（ローカルファイル）
-import * as THREE from './three/build/three.module.js';
-
-// カメラ操作ツール（ローカルファイル）
-import { OrbitControls } from './three/examples/jsm/controls/OrbitControls.js';
-
-// --- Three.js 初期化 ---
 const scene = new THREE.Scene();
-
 const camera = new THREE.PerspectiveCamera(
   75, window.innerWidth / window.innerHeight, 0.1, 1000
 );
-camera.position.set(0, 10, 30);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
+
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+
 document.body.appendChild(renderer.domElement);
 
-// --- オブジェクト ---
-scene.add(new THREE.GridHelper(100, 20));
-scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-const light = new THREE.DirectionalLight(0xffffff, 1.0);
-light.position.set(10, 20, 10);
+scene.add(new THREE.GridHelper(200, 80));
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+
+const light = new THREE.DirectionalLight(0xffffff, 0.8);
+light.position.set(20, 30, 10);
 scene.add(light);
-
-// --- カメラ操作 ---
-const controls = new OrbitControls(camera, renderer.domElement);
-
-// --- アニメーション ---
-function animate() {
-  requestAnimationFrame(animate);
-  controls.update();
-  renderer.render(scene, camera);
-}
-animate();
-
 
 // --- デバッグ用 ---
 
@@ -731,74 +713,74 @@ document.addEventListener('keyup', (e) => {
   keys[key] = false;
 });
 
-// function animate() {
-//   requestAnimationFrame(animate);
+function animate() {
+  requestAnimationFrame(animate);
 
-//   const baseSpeed = 0.1;
-//   const rotateSpeed = 0.03;
-//   const pitchLimit = Math.PI / 2 - 0.1;
+  const baseSpeed = 0.1;
+  const rotateSpeed = 0.03;
+  const pitchLimit = Math.PI / 2 - 0.1;
 
-//   const moveSpeed = baseSpeed * speedMultiplier;
+  const moveSpeed = baseSpeed * speedMultiplier;
 
-//   // 左右移動 (A/D)
-//   if (keys['a']) {
-//     camera.position.x += Math.sin(cameraAngleY + Math.PI / 2) * moveSpeed;
-//     camera.position.z += Math.cos(cameraAngleY + Math.PI / 2) * moveSpeed;
-//   }
-//   if (keys['d']) {
-//     camera.position.x += Math.sin(cameraAngleY - Math.PI / 2) * moveSpeed;
-//     camera.position.z += Math.cos(cameraAngleY - Math.PI / 2) * moveSpeed;
-//   }
+  // 左右移動 (A/D)
+  if (keys['a']) {
+    camera.position.x += Math.sin(cameraAngleY + Math.PI / 2) * moveSpeed;
+    camera.position.z += Math.cos(cameraAngleY + Math.PI / 2) * moveSpeed;
+  }
+  if (keys['d']) {
+    camera.position.x += Math.sin(cameraAngleY - Math.PI / 2) * moveSpeed;
+    camera.position.z += Math.cos(cameraAngleY - Math.PI / 2) * moveSpeed;
+  }
 
-//   // 視点回転 左右 (←/→)
-//   if (keys['arrowleft']) {
-//     cameraAngleY += rotateSpeed;
-//   }
-//   if (keys['arrowright']) {
-//     cameraAngleY -= rotateSpeed;
-//   }
+  // 視点回転 左右 (←/→)
+  if (keys['arrowleft']) {
+    cameraAngleY += rotateSpeed;
+  }
+  if (keys['arrowright']) {
+    cameraAngleY -= rotateSpeed;
+  }
 
-//   // 視点回転 上下 (↑/↓)
-//   if (keys['arrowup']) {
-//     cameraAngleX += rotateSpeed;
-//   }
-//   if (keys['arrowdown']) {
-//     cameraAngleX -= rotateSpeed;
-//   }
-//   cameraAngleX = Math.min(pitchLimit, Math.max(-pitchLimit, cameraAngleX));
+  // 視点回転 上下 (↑/↓)
+  if (keys['arrowup']) {
+    cameraAngleX += rotateSpeed;
+  }
+  if (keys['arrowdown']) {
+    cameraAngleX -= rotateSpeed;
+  }
+  cameraAngleX = Math.min(pitchLimit, Math.max(-pitchLimit, cameraAngleX));
 
-//   // 前後移動 (W/S)
-//   if (keys['w']) {
-//     camera.position.x += Math.sin(cameraAngleY) * moveSpeed;
-//     camera.position.z += Math.cos(cameraAngleY) * moveSpeed;
-//   }
-//   if (keys['s']) {
-//     camera.position.x -= Math.sin(cameraAngleY) * moveSpeed;
-//     camera.position.z -= Math.cos(cameraAngleY) * moveSpeed;
-//   }
+  // 前後移動 (W/S)
+  if (keys['w']) {
+    camera.position.x += Math.sin(cameraAngleY) * moveSpeed;
+    camera.position.z += Math.cos(cameraAngleY) * moveSpeed;
+  }
+  if (keys['s']) {
+    camera.position.x -= Math.sin(cameraAngleY) * moveSpeed;
+    camera.position.z -= Math.cos(cameraAngleY) * moveSpeed;
+  }
 
-//   // 上下移動 (Q/E)
-//   if (keys['q']) {
-//     camera.position.y += moveSpeed;
-//   }
-//   if (keys['e']) {
-//     camera.position.y -= moveSpeed;
-//   }
+  // 上下移動 (Q/E)
+  if (keys['q']) {
+    camera.position.y += moveSpeed;
+  }
+  if (keys['e']) {
+    camera.position.y -= moveSpeed;
+  }
 
-//   // カメラ方向の計算
-//   const direction = new THREE.Vector3(
-//     Math.sin(cameraAngleY) * Math.cos(cameraAngleX),
-//     Math.sin(cameraAngleX),
-//     Math.cos(cameraAngleY) * Math.cos(cameraAngleX)
-//   );
+  // カメラ方向の計算
+  const direction = new THREE.Vector3(
+    Math.sin(cameraAngleY) * Math.cos(cameraAngleX),
+    Math.sin(cameraAngleX),
+    Math.cos(cameraAngleY) * Math.cos(cameraAngleX)
+  );
 
-//   const target = new THREE.Vector3().addVectors(camera.position, direction);
-//   camera.lookAt(target);
+  const target = new THREE.Vector3().addVectors(camera.position, direction);
+  camera.lookAt(target);
 
-//   renderer.render(scene, camera);
-// }
+  renderer.render(scene, camera);
+}
 
-// animate();
+animate();
 
 // // -----------------------------------------------------------------------------
 
