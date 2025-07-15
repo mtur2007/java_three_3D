@@ -859,7 +859,7 @@ renderer.render(scene, camera);
 
 // キーボード操作（鑑賞用）
 // ========== 設定値 ========== //
-const baseSpeed = 0.1;
+let baseSpeed = 0.1;
 const rotateSpeed = 0.03;
 const pitchLimit = Math.PI / 2 - 0.1;
 
@@ -874,8 +874,17 @@ let cameraAngleX = 0;  // 垂直回転
 
 // ========== ボタン UI ========== //
 // 状態フラグ
+let speedUp = false;
 let moveUp = false;
 let moveDown = false;
+
+document.getElementById('speed-up').addEventListener('touchstart', () => speedUp = true);
+document.getElementById('speed-up').addEventListener('mousedown', () => speedUp = true);
+
+
+document.getElementById('speed-down').style.display = 'none';
+document.getElementById('speed-down').addEventListener('touchstart', () => speedUp = true);
+document.getElementById('speed-down').addEventListener('mousedown', () => speedUp = true);
 
 document.getElementById('btn-up').addEventListener('touchstart', () => moveUp = true);
 document.getElementById('btn-up').addEventListener('touchend', () => moveUp = false);
@@ -908,7 +917,7 @@ const joystickLook = nipplejs.create({
 joystickLeft.on('move', (evt, data) => {
   if (!data.angle) return;
   const rad = data.angle.radian -1.6;
-  const speed = data.distance * 0.01;
+  const speed = data.distance * 0.02;
 
   const adjustedRad = rad + cameraAngleY;
 
@@ -970,8 +979,21 @@ function animate() {
   camera.position.z += camZ * moveSpeed * forward;
 
   // スティック入力（カメラ基準移動）
-  camera.position.x += moveVector.x;
-  camera.position.z += moveVector.y;
+  camera.position.x += moveVector.x * moveSpeed;
+  camera.position.z += moveVector.y * moveSpeed;
+
+  if (speedUp) {
+    if (baseSpeed === 0.1){
+      baseSpeed = 0.3
+      document.getElementById('speed-up').style.display = 'none';
+      document.getElementById('speed-down').style.display = 'block';
+    } else {
+      baseSpeed = 0.1
+      document.getElementById('speed-up').style.display = 'block';
+      document.getElementById('speed-down').style.display = 'none';
+    }
+    speedUp = false
+  }
 
   // 上下移動（Q/Eキー）
   if (keys['q'] || moveUp) {
@@ -1090,7 +1112,7 @@ if (true) {
   material = new THREE.MeshStandardMaterial({...metalParams_2});
   const prop = new THREE.InstancedMesh(geometry, material, 376);
 
-  // 6. 小天井板（パーツ）
+  // 9. 小天井板（パーツ）
   geometry = new THREE.BoxGeometry(70, 0.04, 0.3);
   material = new THREE.MeshStandardMaterial({...metalParams});
   const board = new THREE.InstancedMesh(geometry, material, 4);
