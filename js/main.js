@@ -1,5 +1,4 @@
 // --- 基本設定 ---
-console.log('run')
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(
@@ -878,6 +877,11 @@ let cameraAngleX = 0;  // 垂直回転
 let moveUp = false;
 let moveDown = false;
 
+document.getElementById('btn-up').addEventListener('touchstart', () => moveUp = true);
+document.getElementById('btn-up').addEventListener('touchend', () => moveUp = false);
+document.getElementById('btn-down').addEventListener('touchstart', () => moveDown = true);
+document.getElementById('btn-down').addEventListener('touchend', () => moveDown = false);
+
 document.getElementById('btn-up').addEventListener('mousedown', () => moveUp = true);
 document.getElementById('btn-up').addEventListener('mouseup', () => moveUp = false);
 document.getElementById('btn-down').addEventListener('mousedown', () => moveDown = true);
@@ -925,8 +929,11 @@ joystickLook.on('move', (evt, data) => {
   // ベクトル成分に変換（X: 横方向, Y: 縦方向）
   const vecX = Math.sin(rad)
   const vecY = Math.cos(rad)
-  const speed_x = vecX*0.8 ;   // 距離（スティックの傾き強さ）
-  const speed_y = vecY*0.8 ;   // 距離（スティックの傾き強さ）
+
+  const speed = data.distance * 0.0006;
+
+  const speed_x = vecX*speed ;   // 距離（スティックの傾き強さ）
+  const speed_y = vecY*speed ;   // 距離（スティックの傾き強さ）
   
   // 水平方向の回転量
   lookVector.x = speed_x
@@ -986,8 +993,8 @@ function animate() {
   // カメラ注視点の更新
   // rightStickVector.x → 左右方向（横回転に使う）
   // rightStickVector.y → 上下方向（縦回転に使う）
-  cameraAngleY += lookVector.x * rotateSpeed;
-  cameraAngleX += lookVector.y * rotateSpeed;
+  cameraAngleY += lookVector.x;
+  cameraAngleX += lookVector.y;
 
   // ピッチ制限（上下の角度が大きくなりすぎないように）
   cameraAngleX = Math.min(pitchLimit, Math.max(-pitchLimit, cameraAngleX));
