@@ -6,6 +6,49 @@
   <style>body { margin: 0; overflow: hidden; }</style>
 </head>
 <body>
+  <div id="joystick-left" class="joystick-zone"></div>
+  <div id="joystick-right" class="joystick-zone"></div>
+
+  <style>
+    
+    .joystick-zone {
+      position: absolute;
+      width: 150px;
+      height: 150px;
+      bottom: 20px;
+      z-index: 10;
+    }
+
+    #joystick-left {
+      left: 20px;
+    }
+
+    #joystick-right {
+      right: 20px;
+    }
+
+  </style>
+  <!-- 上昇ボタン -->
+  <button id="btn-up" style="
+  position: fixed; left: 20px; bottom: 120px;
+  width: 60px; height: 60px; font-size: 24px;
+  border-radius: 30px; z-index: 20;
+  ">⬆️</button>
+
+  <!-- 下降ボタン -->
+  <button id="btn-down" style="
+  position: fixed; left: 20px; bottom: 40px;
+  width: 60px; height: 60px; font-size: 24px;
+  border-radius: 30px; z-index: 20;
+  ">⬇️</button>
+
+  <!-- 左スティック（左下に表示） -->
+  <div id="left-stick" style="position: fixed; left: 7vw; bottom: 0; width: 40vw; height: 40vh; z-index: 10;"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.8.6/nipplejs.min.js"></script>
+
+  <div id="right-stick" style="position: fixed; right: 7vw; bottom: 0; width: 40vw; height: 40vh; z-index: 10;"></div>
+  
+
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script type="module" src="js/main.js"></script>
 </body>

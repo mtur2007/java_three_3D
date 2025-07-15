@@ -858,89 +858,141 @@ camera.position.set(-0.1, 14, -35);
 camera.lookAt(new THREE.Vector3(3, y, -35));
 renderer.render(scene, camera);
 
-
 // キーボード操作（鑑賞用）
+// ========== 設定値 ========== //
+const baseSpeed = 0.1;
+const rotateSpeed = 0.03;
+const pitchLimit = Math.PI / 2 - 0.1;
+
+// ========== 入力管理 ========== //
 const keys = {};
-let cameraAngleY = 0;
-let cameraAngleX = 0;
+document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
+document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
 
-let speedMultiplier = 1; // 速度倍率（固定）
+// ========== カメラ制御変数 ========== //
+let cameraAngleY = 0;  // 水平回転
+let cameraAngleX = 0;  // 垂直回転
 
-document.addEventListener('keydown', (e) => {
-  const key = e.key.toLowerCase();
+// ========== ボタン UI ========== //
+// 状態フラグ
+let moveUp = false;
+let moveDown = false;
 
-  // 数字キー押下で倍率設定
-  if (key >= '1' && key <= '9') {
-    speedMultiplier = parseInt(key, 10) * 0.5;
-  }
-  // 0キーで倍率リセット
-  else if (key === '0') {
-    speedMultiplier = 1;
-  }
+document.getElementById('btn-up').addEventListener('mousedown', () => moveUp = true);
+document.getElementById('btn-up').addEventListener('mouseup', () => moveUp = false);
+document.getElementById('btn-down').addEventListener('mousedown', () => moveDown = true);
+document.getElementById('btn-down').addEventListener('mouseup', () => moveDown = false);
 
-  keys[key] = true;
+// ========== スティック移動ベクトル ========== //
+let moveVector = { x: 0, y: 0 };
+
+// ========== スティック UI ========== //
+const joystickLeft = nipplejs.create({
+  zone: document.getElementById('left-stick'),
+  mode: 'static',
+  position: { left: '20%', bottom: '20%' },
+  color: 'blue',
 });
 
-document.addEventListener('keyup', (e) => {
-  const key = e.key.toLowerCase();
-  keys[key] = false;
+const joystickLook = nipplejs.create({
+  zone: document.getElementById('right-stick'),
+  mode: 'static',
+  position: { right: '20%', bottom: '20%' },
+  color: 'red',
 });
 
+joystickLeft.on('move', (evt, data) => {
+  if (!data.angle) return;
+  const rad = data.angle.radian -1.6;
+  const speed = data.distance * 0.01;
+
+  const adjustedRad = rad + cameraAngleY;
+
+  moveVector.x = Math.sin(adjustedRad) * speed;
+  moveVector.y = Math.cos(adjustedRad) * speed;
+});
+
+joystickLeft.on('end', () => {
+  moveVector.x = 0;
+  moveVector.y = 0;
+});
+
+let lookVector = { x: 0, y: 0 };
+
+joystickLook.on('move', (evt, data) => {
+  const rad = data.angle.radian - 1.6;
+
+  // ベクトル成分に変換（X: 横方向, Y: 縦方向）
+  const vecX = Math.sin(rad)
+  const vecY = Math.cos(rad)
+  const speed_x = vecX*0.8 ;   // 距離（スティックの傾き強さ）
+  const speed_y = vecY*0.8 ;   // 距離（スティックの傾き強さ）
+  
+  // 水平方向の回転量
+  lookVector.x = speed_x
+  // 垂直方向の回転量
+  lookVector.y = speed_y
+
+});
+
+joystickLook.on('end', () => {
+  lookVector.x = 0;
+  lookVector.y = 0;
+});
+
+// ========== アニメーションループ ========== //
 function animate() {
   requestAnimationFrame(animate);
 
-  const baseSpeed = 0.1;
-  const rotateSpeed = 0.03;
-  const pitchLimit = Math.PI / 2 - 0.1;
+  const moveSpeed = baseSpeed;
 
-  const moveSpeed = baseSpeed * speedMultiplier;
+  // キーボード移動処理
+  const strafe = (keys['a'] ? 1 : 0) - (keys['d'] ? 1 : 0);
+  const forward = (keys['w'] ? 1 : 0) - (keys['s'] ? 1 : 0);
 
-  // 左右移動 (A/D)
-  if (keys['a']) {
-    camera.position.x += Math.sin(cameraAngleY + Math.PI / 2) * moveSpeed;
-    camera.position.z += Math.cos(cameraAngleY + Math.PI / 2) * moveSpeed;
-  }
-  if (keys['d']) {
-    camera.position.x += Math.sin(cameraAngleY - Math.PI / 2) * moveSpeed;
-    camera.position.z += Math.cos(cameraAngleY - Math.PI / 2) * moveSpeed;
-  }
+  // カメラ角度による方向ベクトル
+  const camX = Math.sin(cameraAngleY);
+  const camZ = Math.cos(cameraAngleY);
 
-  // 視点回転 左右 (←/→)
-  if (keys['arrowleft']) {
-    cameraAngleY += rotateSpeed;
-  }
-  if (keys['arrowright']) {
-    cameraAngleY -= rotateSpeed;
-  }
+  // 横移動
+  camera.position.x += Math.sin(cameraAngleY + Math.PI / 2) * moveSpeed * strafe;
+  camera.position.z += Math.cos(cameraAngleY + Math.PI / 2) * moveSpeed * strafe;
 
-  // 視点回転 上下 (↑/↓)
-  if (keys['arrowup']) {
-    cameraAngleX += rotateSpeed;
-  }
-  if (keys['arrowdown']) {
-    cameraAngleX -= rotateSpeed;
-  }
-  cameraAngleX = Math.min(pitchLimit, Math.max(-pitchLimit, cameraAngleX));
+  // 前後移動
+  camera.position.x += camX * moveSpeed * forward;
+  camera.position.z += camZ * moveSpeed * forward;
 
-  // 前後移動 (W/S)
-  if (keys['w']) {
-    camera.position.x += Math.sin(cameraAngleY) * moveSpeed;
-    camera.position.z += Math.cos(cameraAngleY) * moveSpeed;
-  }
-  if (keys['s']) {
-    camera.position.x -= Math.sin(cameraAngleY) * moveSpeed;
-    camera.position.z -= Math.cos(cameraAngleY) * moveSpeed;
-  }
+  // スティック入力（カメラ基準移動）
+  camera.position.x += moveVector.x;
+  camera.position.z += moveVector.y;
 
-  // 上下移動 (Q/E)
-  if (keys['q']) {
+  // 上下移動（Q/Eキー）
+  if (keys['q'] || moveUp) {
     camera.position.y += moveSpeed;
   }
-  if (keys['e']) {
+  if (keys['e'] || moveDown) {
     camera.position.y -= moveSpeed;
   }
+  
+  // 回転（左右）
+  if (keys['arrowleft'])  cameraAngleY += rotateSpeed;
+  if (keys['arrowright']) cameraAngleY -= rotateSpeed;
 
-  // カメラ方向の計算
+  // 回転（上下）
+  if (keys['arrowup'])    cameraAngleX += rotateSpeed;
+  if (keys['arrowdown'])  cameraAngleX -= rotateSpeed;
+  cameraAngleX = Math.max(-pitchLimit, Math.min(pitchLimit, cameraAngleX));
+
+  // カメラ注視点の更新
+  // rightStickVector.x → 左右方向（横回転に使う）
+  // rightStickVector.y → 上下方向（縦回転に使う）
+  cameraAngleY += lookVector.x * rotateSpeed;
+  cameraAngleX += lookVector.y * rotateSpeed;
+
+  // ピッチ制限（上下の角度が大きくなりすぎないように）
+  cameraAngleX = Math.min(pitchLimit, Math.max(-pitchLimit, cameraAngleX));
+
+  // カメラの注視点の更新（カメラ位置 + 方向ベクトル）
   const direction = new THREE.Vector3(
     Math.sin(cameraAngleY) * Math.cos(cameraAngleX),
     Math.sin(cameraAngleX),
