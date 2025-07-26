@@ -76,6 +76,23 @@ function getPointByDistanceRatio(curvePoints, ratio) {
   return curvePoints[Math.min(index, totalLength - 1)];
 }
 
+// 線路表示
+function createTrack(curve, color = 0x333333) {
+  const geom = new THREE.BufferGeometry().setFromPoints(curve.getPoints(100));
+  const mat = new THREE.LineBasicMaterial({ color });
+  const line = new THREE.Line(geom, mat);
+  scene.add(line);
+}
+
+// エスカレーター軌道表示
+// function createPathMesh(path, segments = 100, radius = 0.02, radialSegments = 8, closed = true, color = 0x00ff00) {
+//   const geometry = new THREE.TubeGeometry(path, segments, radius, radialSegments, closed);
+//   const material = new THREE.MeshBasicMaterial({ color: color });
+//   const mesh = new THREE.Mesh(geometry, material);
+//   return mesh;
+// }
+
+
 // --- 鉄橋用ユーティリティ ---
 // 柱
 function createBridgePillar(x, z, height = 5) {
@@ -104,6 +121,20 @@ function createBridgeGirder(start, end) {
   girder.rotation.y = Math.atan2(dx,dz)-1.57;
   girder.rotation.z = Math.atan2(dy,length);
   scene.add(girder);
+}
+
+// 高架線路生成(線型に沿う)
+function generateBridge(curve, pillarInterval = 10, interval = 25) {
+  const points = getPointsEveryM(curve, interval);
+  for (let i = 0; i < points.length; i += pillarInterval) {
+    const p = points[i];
+    createBridgePillar(p.x, p.z, p.y);
+
+    if (i + pillarInterval < points.length) {
+      const p2 = points[i + pillarInterval];
+      createBridgeGirder(p, p2);
+    }
+  }
 }
 
 // 駅
@@ -207,8 +238,179 @@ function getPointsEveryM(curve, interval = 25) {
   return points;
 }
 
+// ホーム屋根 の作成
+function placePlatformRoof(track_1,track_2,y,quantity) {
+  const board_length_1 = track_1.getLength(track_1)/quantity;
+  const board_length_2 = track_2.getLength(track_2)/quantity;
+  const points_1 = getPointsEveryM(track_1, board_length_1);
+  const points_2 = getPointsEveryM(track_2, board_length_2);
 
-// ホームドア ドアの生成
+  if (points_1.length != points_2.length){console.log('不均一')}
+
+  const material = new THREE.MeshStandardMaterial({ color: 0xffffff })
+  
+  const diff_x = points_1[0].x - points_2[0].x
+  const diff_z = points_1[0].z - points_2[0].z
+
+  let middle_0 = {}
+  let middle_1 = {
+    x: points_1[0].x - diff_x / 2,
+    z: points_1[0].z - diff_z / 2
+  }
+
+  let n = 0.8
+  for (let i = 0; i < points_1.length-1; i++){
+  // for (let i = 0; i < 1; i++){
+    const diff_x = points_1[i+1].x - points_2[i+1].x
+    const diff_z = points_1[i+1].z - points_2[i+1].z
+
+    middle_0 = middle_1
+    middle_1 = {
+      x: points_1[i+1].x - diff_x / 2,
+      z: points_1[i+1].z - diff_z / 2
+    }
+
+    // １番線
+    const corner_1 = {
+      x: middle_0.x - middle_1.x, 
+      z: middle_0.z - middle_1.z}
+    const diff_rotation = 0 - Math.atan2(corner_1.x,corner_1.z)
+    const fixes_rotation_1 = Math.atan2(corner_1.x,corner_1.z) + diff_rotation
+    const radius_1 = Math.sqrt(corner_1.x**2 + corner_1.z**2)
+
+    const corner_2 = {
+      x: middle_0.x - points_1[i].x, 
+      z: middle_0.z - points_1[i].z}
+    const fixes_rotation_2 = Math.atan2(corner_2.x,corner_2.z) + diff_rotation
+    const radius_2 = Math.sqrt(corner_2.x**2 + corner_2.z**2)
+
+    const corner_3 = {
+      x: middle_0.x - points_1[i+1].x, 
+      z: middle_0.z - points_1[i+1].z}
+    const fixes_rotation_3 = Math.atan2(corner_3.x,corner_3.z) + diff_rotation
+    const radius_3 = Math.sqrt(corner_3.x**2 + corner_3.z**2)
+
+    Map_pin(middle_0.x,middle_0.z,15,0.05,0x00ff00)
+    Map_pin(points_1[i].x,points_1[i].z,15,0.05,0x0000ff)
+
+    Map_pin(middle_1.x,middle_1.z,15,0.05,0x00ff00)
+    Map_pin(points_1[i+1].x,points_1[i+1].z,15,0.05,0x0000ff)
+
+    const board_1 = new THREE.Shape();
+    board_1.moveTo(0, 0);
+    board_1.lineTo(Math.sin(fixes_rotation_1) * radius_1, Math.cos(fixes_rotation_1) * radius_1);
+    board_1.lineTo(Math.sin(fixes_rotation_3) * radius_3,Math.cos(fixes_rotation_3) * radius_3);
+    board_1.lineTo(Math.sin(fixes_rotation_2) * radius_2, Math.cos(fixes_rotation_2) * radius_2);
+
+    const geometry_1 = new THREE.ExtrudeGeometry(board_1, { depth: 0.1, bevelEnabled: false });
+    const mesh_1 = new THREE.Mesh(geometry_1, material);
+
+    mesh_1.rotation.z = Math.atan2(corner_1.x,corner_1.z)
+    mesh_1.rotation.x = -90 * Math.PI / 180;
+    
+    const cornerA = new THREE.Vector3(
+      0, 
+      0,
+      0
+    );
+    
+    const cornerB = new THREE.Vector3(
+      Math.sin(fixes_rotation_1) * radius_1,
+      Math.cos(fixes_rotation_1) * radius_1,
+      0
+    );
+
+    // 1. 最新の点Aと点Bを取得（ローカル or ワールド座標で）
+    const pointA_world = mesh_1.localToWorld(cornerA.clone());
+    const pointB_world = mesh_1.localToWorld(cornerB.clone());
+
+    // 2. 回転軸 = B - A（単位ベクトルに正規化）
+    const axis = new THREE.Vector3().subVectors(pointB_world, pointA_world).normalize();
+
+    // 3. クォータニオンで回転
+    const angle = -170 * Math.PI / 180; // 例えば毎回2度ずつ回転させたいとき
+    const quat = new THREE.Quaternion().setFromAxisAngle(axis, angle);
+
+    // 4. 回転を適用
+    mesh_1.applyQuaternion(quat);
+
+    mesh_1.position.x = middle_0.x
+    mesh_1.position.z = middle_0.z
+    mesh_1.position.y = y-0.4; // 高さ1.5に移動
+  
+    scene.add(mesh_1);
+
+    // 2番線
+    const corner2_1 = {
+      x: middle_0.x - middle_1.x, 
+      z: middle_0.z - middle_1.z}
+    const diff_rotation2 = 0 - Math.atan2(corner2_1.x,corner2_1.z)
+    const fixes_rotation2_1 = Math.atan2(corner2_1.x,corner2_1.z) + diff_rotation2
+    const radius2_1 = Math.sqrt(corner2_1.x**2 + corner2_1.z**2)
+
+    const corner2_2 = {
+      x: middle_0.x - points_2[i].x, 
+      z: middle_0.z - points_2[i].z}
+    const fixes_rotation2_2 = Math.atan2(corner2_2.x,corner2_2.z) + diff_rotation2
+    const radius2_2 = Math.sqrt(corner2_2.x**2 + corner2_2.z**2)
+
+    const corner2_3 = {
+      x: middle_0.x - points_2[i+1].x, 
+      z: middle_0.z - points_2[i+1].z}
+    const fixes_rotation2_3 = Math.atan2(corner2_3.x,corner2_3.z) + diff_rotation2
+    const radius2_3 = Math.sqrt(corner2_3.x**2 + corner2_3.z**2)
+
+    Map_pin(points_2[i].x,points_2[i].z,15,0.05,0xff0000)
+    Map_pin(points_2[i+1].x,points_2[i+1].z,15,0.05,0x000000)
+
+    const board2_1 = new THREE.Shape();
+    board2_1.moveTo(0, 0);
+    board2_1.lineTo(Math.sin(fixes_rotation2_1) * radius2_1, Math.cos(fixes_rotation2_1) * radius2_1);
+    board2_1.lineTo(Math.sin(fixes_rotation2_3) * radius2_3,Math.cos(fixes_rotation2_3) * radius2_3);
+    board2_1.lineTo(Math.sin(fixes_rotation2_2) * radius2_2, Math.cos(fixes_rotation2_2) * radius2_2);
+
+    const geometry2_1 = new THREE.ExtrudeGeometry(board2_1, { depth: 0.1, bevelEnabled: false });
+    const mesh2_1 = new THREE.Mesh(geometry2_1, material);
+
+    mesh2_1.rotation.z = Math.atan2(corner2_1.x,corner2_1.z)
+    mesh2_1.rotation.x = -90 * Math.PI / 180;
+    
+    const corner2A = new THREE.Vector3(
+      0, 
+      0,
+      0
+    );
+    
+    const corner2B = new THREE.Vector3(
+      Math.sin(fixes_rotation2_1) * radius2_1,
+      Math.cos(fixes_rotation2_1) * radius2_1,
+      0
+    );
+
+    // 1. 最新の点Aと点Bを取得（ローカル or ワールド座標で）
+    const point2A_world = mesh2_1.localToWorld(corner2A.clone());
+    const point2B_world = mesh2_1.localToWorld(corner2B.clone());
+
+    // 2. 回転軸 = B - A（単位ベクトルに正規化）
+    const axis2 = new THREE.Vector3().subVectors(point2B_world, point2A_world).normalize();
+
+    // 3. クォータニオンで回転
+    const angle2 = 170 * Math.PI / 180; // 例えば毎回2度ずつ回転させたいとき
+    const quat2 = new THREE.Quaternion().setFromAxisAngle(axis2, angle2);
+
+    // 4. 回転を適用
+    mesh2_1.applyQuaternion(quat2);
+
+    mesh2_1.position.x = middle_0.x
+    mesh2_1.position.z = middle_0.z
+    mesh2_1.position.y = y-0.4; // 高さ1.5に移動
+  
+    scene.add(mesh2_1);
+
+  }
+}
+
+// ホームドア の生成
 function placeTrainDoors(centerX, centerY, centerZ, angle, track_doors, totalLength = 4, doorCount = 4) {
   const spacing = totalLength / doorCount;   // ドア同士の中心間隔（例：1m）
   const doorWidth = 0.65;                    // ドアの横幅
@@ -312,68 +514,15 @@ function placePlatformDoors(curve, offset = 1, interval = 25, side = 'left') {
   return track_doors
 }
 
-// 高架線路生成(線型に沿う)
-function generateBridge(curve, pillarInterval = 10, interval = 25) {
-  const points = getPointsEveryM(curve, interval);
-  for (let i = 0; i < points.length; i += pillarInterval) {
-    const p = points[i];
-    createBridgePillar(p.x, p.z, p.y);
-
-    if (i + pillarInterval < points.length) {
-      const p2 = points[i + pillarInterval];
-      createBridgeGirder(p, p2);
-    }
-  }
-}
-
-// 線路表示
-function createTrack(curve, color = 0x333333) {
-  const geom = new THREE.BufferGeometry().setFromPoints(curve.getPoints(100));
-  const mat = new THREE.LineBasicMaterial({ color });
-  const line = new THREE.Line(geom, mat);
-  scene.add(line);
-}
-
-// 車両設定（テクスチャ対応版）
-// function TrainSettings(length, color, cars, transparency = 1, texturePath = null) {
-
-//   const geo = new THREE.BoxGeometry(1, 1, length);
-//   let baseMaterial;
-
-//   // テクスチャ指定がある場合
-//   if (texturePath) {
-//     const texture = new THREE.TextureLoader().load(texturePath);
-//     texture.wrapS = THREE.RepeatWrapping;
-//     texture.wrapT = THREE.RepeatWrapping;
-
-//     texture.repeat.set(1, 1); // 必要に応じて調整
-//     texture.colorSpace = THREE.SRGBColorSpace;
-
-//     baseMaterial = new THREE.MeshStandardMaterial({
-//       map: texture,
-//       transparent: true,
-//       opacity: transparency
-//     });
-//   } else {
-//     // 通常の単色マテリアル
-//     baseMaterial = new THREE.MeshStandardMaterial({
-//       color: color,
-//       transparent: true,
-//       opacity: transparency
-//     });
-//   }
-
-//   const trainCars = [];
-
-//   for (let i = 0; i < cars; i++) {
-//     const car = new THREE.Mesh(geo, baseMaterial.clone());
-//     trainCars.push(car);
-//     scene.add(car);
-//   }
-
-//   return trainCars;
+// ホームの屋根の生成
+// function placePlatformRoof(track1,track2, offset = 1, quantity = 25) {
+//   const board_length_1 = root.getLength(track1)/quantity;
+//   const board_length_2 = root.getLength(track2)/quantity;
+//   const points_1 = getPointsEveryM(track1, board_length_1);
+//   const points_2 = getPointsEveryM(track2, board_length_2);
 // }
 
+// 車両設定（テクスチャ対応版）
 function TrainSettings(
   length,
   color,
@@ -467,24 +616,28 @@ function runTrain(trainCars, root, track_doors, door_interval, max_speed=0.002, 
   const Equal_root = getPointsEveryM(root, 0.01); // spacing=0.1mごと（細かすぎたら25に）
   const totalPoints = Equal_root.length;
 
-  let test = getPointByDistanceRatio(Equal_root, stop_point);
+  const length = root.getLength(root);
+
+  let test = getPointByDistanceRatio(Equal_root, stop_point+3.4/length);
   // Map_pin(test.x,test.z, 15, 0.05)
 
-  const length = root.getLength(root);
   const carSpacing = door_interval / length
   
   const maxOffsetT = carSpacing * (trainCars.length + 1);
 
   let speed = max_speed
-  let stop_point_diff = max_speed%add_speed
+  let stop_point_diff = 0
 
-  for (let i = 0; i < Math.floor(max_speed / add_speed); i++) {
-    stop_point_diff += (i+1)*add_speed};
+  while (speed >= 0){
+    speed -= add_speed
+    stop_point_diff += speed};
+  
   const brake_point = stop_point - stop_point_diff
+
+  speed = max_speed
   
   test = getPointByDistanceRatio(Equal_root, brake_point);
  
-  t = 0
   let door_move_O = false
   let door_move_C = false
   let cool_time = 0.1
@@ -525,16 +678,16 @@ function runTrain(trainCars, root, track_doors, door_interval, max_speed=0.002, 
 
         if (train_stoped === false && t > brake_point){
           speed -= add_speed;
-        } else if (speed >= max_speed){
-          speed = max_speed
         } else {
           speed += add_speed
-        };
+          if (speed >= max_speed){speed = max_speed}
+        }
         
         t += speed;
 
       } else {
         console.log("停車")
+        console.log('now : '+t+'stop : '+stop_point)
         train_stoped = true
         door_move_O = true
         door_move_C = true
@@ -546,11 +699,11 @@ function runTrain(trainCars, root, track_doors, door_interval, max_speed=0.002, 
 
       cool_time -= 0.001
     
-      if ((cool_time < 0.8) && door_move_O){
+      if ((cool_time < 0.88) && door_move_O){
         console.log("< > door_open");
         door_move_O = false
         moveDoorsFromGroup(track_doors,1)
-      } else if ((cool_time < 0.2) && door_move_C){
+      } else if ((cool_time < 0.3) && door_move_C){
         console.log("> < door_close");
         door_move_C = false
         moveDoorsFromGroup(track_doors,0)
@@ -737,7 +890,14 @@ generateBridge(line_4, 10, interval);
 createStation(track1,track2,200,y,0.7, '|[]|') // 島式 |[]| : 相対式 []||[]
 createStation(track3,track4,200,y,0.7, '|[]|') // 島式 |[]| : 相対式 []||[]
 
-// ホームドアの設置
+// 駅(屋根)を生成
+const roof_start = 0.4;
+const roof_end = 0.675;
+const roof_track1 = sliceCurvePoints(line_1, roof_start, roof_end);
+const roof_track2 = sliceCurvePoints(line_2, roof_start, roof_end);
+placePlatformRoof(roof_track1,roof_track2,y+1.5,10)
+
+// 駅(ホームドア)を生成
 const train_width = 6.8
 const car_Spacing = 0.15
 
@@ -749,13 +909,15 @@ const track3_doors = placePlatformDoors(track3, 0.9, door_interval, 'left');  //
 const track4_doors = placePlatformDoors(track4, 0.9, door_interval, 'right');  // 左側に設置
 
 // 電車の運行
-const max_speed = 0.001 // 制限速度(最高)
-const add_speed = 0.0000015 // 追加速度(加速/減速)
+// const max_speed = 0.001 // 制限速度(最高)
+// const add_speed = 0.0000010 // 追加速度(加速/減速)
+const max_speed = 0.0005 // 制限速度(最高)
+const add_speed = 0.000001 // 追加速度(加速/減速)
 
 const Train_1 = TrainSettings(
   train_width,
   0x888888,
-  10,
+  12,
   1,
   {
     side_right: 'textures/tyuou_1.png',
@@ -775,7 +937,7 @@ const Train_1 = TrainSettings(
 const Train_4 = TrainSettings(
   train_width,
   0x888888,
-  10,
+  12,
   1,
   {
     side_right: 'textures/tyuou_1.png',
@@ -840,11 +1002,12 @@ const reversedCurve_3 = new THREE.CatmullRomCurve3(
   line_3.getPoints(100).reverse()
 );
 
-runTrain(Train_1, line_1, track1_doors, door_interval, max_speed, add_speed, 0.775, 0.098)
-runTrain(Train_2, line_2, track2_doors, door_interval, max_speed, add_speed, 0.778, 0.098)
-runTrain(Train_3, reversedCurve_3, track3_doors, door_interval, max_speed, add_speed, 0.4987, 0.098)
-runTrain(Train_4, reversedCurve_4, track4_doors, door_interval, max_speed, add_speed, 0.563, 0.098)
+runTrain(Train_1, line_1, track1_doors, door_interval, max_speed, add_speed, 0.7745)
+runTrain(Train_2, line_2, track2_doors, door_interval, max_speed, add_speed, 0.7775)
+runTrain(Train_3, reversedCurve_3, track3_doors, door_interval, max_speed, add_speed, 0.4985)
+runTrain(Train_4, reversedCurve_4, track4_doors, door_interval, max_speed, add_speed, 0.5625)
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // カメラ操作 ----------------------------------------------------------------
 
@@ -1040,6 +1203,10 @@ animate();
 
 // --- マップの手動作成(駅舎設定) ---
 
+const ceiling_Spacing = (train_width+car_Spacing) +2
+const beam_Spacing = ceiling_Spacing/9
+const Podium_deck_width = ceiling_Spacing*5 + beam_Spacing*3
+
 if (true) {
 
   // 鉄のような金属マテリアル設定
@@ -1059,7 +1226,7 @@ if (true) {
   };
 
   // 1. 天井本体（Mesh）
-  const ceilingGeometry = new THREE.BoxGeometry(10, 0.1, 72);
+  const ceilingGeometry = new THREE.BoxGeometry(10, 0.1, Podium_deck_width);
   const ceilingMaterial = new THREE.MeshStandardMaterial({...metalParams});
   const ceilingMesh = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
 
@@ -1067,28 +1234,28 @@ if (true) {
   let material = NaN
 
   // 2. 柱（縦方向ビーム）
-  geometry = new THREE.BoxGeometry(0.1, 1, 72);
+  geometry = new THREE.BoxGeometry(0.05, 1, Podium_deck_width);
   material = new THREE.MeshStandardMaterial({...metalParams});
-  const beam_pillar = new THREE.InstancedMesh(geometry, material, 8);
+  const beam_pillar = new THREE.InstancedMesh(geometry, material, 10);
 
   // 3. 柱（横方向ビーム）
-  geometry = new THREE.BoxGeometry(0.1, 1, 10);
+  geometry = new THREE.BoxGeometry(0.05, 1, 10);
   material = new THREE.MeshStandardMaterial({...metalParams});
   const count = 54;
   const beam_pillar_2 = new THREE.InstancedMesh(geometry, material, count);
 
   // 4. 鉄骨梁（縦）
-  geometry = new THREE.BoxGeometry(0.2, 0.1, 72);
+  geometry = new THREE.BoxGeometry(0.15, 0.05, Podium_deck_width);
   material = new THREE.MeshStandardMaterial({...metalParams});
-  const beam = new THREE.InstancedMesh(geometry, material, 7);
+  const beam = new THREE.InstancedMesh(geometry, material, 10);
 
   // 5. 鉄骨梁（横）
-  geometry = new THREE.BoxGeometry(0.2, 0.1, 10);
+  geometry = new THREE.BoxGeometry(0.15, 0.05, 10);
   material = new THREE.MeshStandardMaterial({...metalParams});
   const beam_2 = new THREE.InstancedMesh(geometry, material, count);
 
   // 6. 小天井板（パーツ）
-  geometry = new THREE.BoxGeometry(1.5, 0.1, 10);
+  geometry = new THREE.BoxGeometry(beam_Spacing, 0.05, 10);
   material = new THREE.MeshStandardMaterial({...metalParams});
   const ceiling = new THREE.InstancedMesh(geometry, material, 6);
 
@@ -1113,7 +1280,7 @@ if (true) {
   const prop = new THREE.InstancedMesh(geometry, material, 376);
 
   // 9. 小天井板（パーツ）
-  geometry = new THREE.BoxGeometry(70, 0.04, 0.3);
+  geometry = new THREE.BoxGeometry(Podium_deck_width, 0.04, 0.3);
   material = new THREE.MeshStandardMaterial({...metalParams});
   const board = new THREE.InstancedMesh(geometry, material, 4);
 
@@ -1156,63 +1323,68 @@ if (true) {
   }  
 
   let beam_y = 9.5
-  let beam_z = 10
-  object_update({ins_obj: beam_pillar, ins_idx: 0, pos_x: 5.5,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam_pillar, ins_idx: 1, pos_x: 3.5,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam_pillar, ins_idx: 2, pos_x: 1.7,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam_pillar, ins_idx: 3, pos_x: 0.7,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam_pillar, ins_idx: 4, pos_x: -1.1, pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam_pillar, ins_idx: 5, pos_x: -2.1, pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam_pillar, ins_idx: 6, pos_x: -4,   pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam_pillar, ins_idx: 7, pos_x: -4.5, pos_y: beam_y+0.5, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
+  let beam_z = 20
+  object_update({ins_obj: beam_pillar, ins_idx: 0, pos_x: 5.5,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // | : : : : : : :
+  object_update({ins_obj: beam_pillar, ins_idx: 1, pos_x: 4,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // : | : : : : : :
+  object_update({ins_obj: beam_pillar, ins_idx: 2, pos_x: 2.8,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // : : | : : : : :
+  object_update({ins_obj: beam_pillar, ins_idx: 3, pos_x: 1.7,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // : : | : : : : :
+  object_update({ins_obj: beam_pillar, ins_idx: 4, pos_x: 0.6,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // : : : | : : : :
+  object_update({ins_obj: beam_pillar, ins_idx: 5, pos_x: -0.6, pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // : : : : | : : :
+  object_update({ins_obj: beam_pillar, ins_idx: 6, pos_x: -1.7, pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // : : : : : | : :
+  object_update({ins_obj: beam_pillar, ins_idx: 7, pos_x: -2.9,   pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // : : : : : : | : 
+  object_update({ins_obj: beam_pillar, ins_idx: 8, pos_x: -4,   pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // : : : : : : | :
+  object_update({ins_obj: beam_pillar, ins_idx: 9, pos_x: -4.5, pos_y: beam_y+0.5, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})  // : : : : : : : |
 
   beam_y -= 0.5
   object_update({ins_obj: beam, ins_idx: 0, pos_x: 5.5,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam, ins_idx: 1, pos_x: 3.5,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam, ins_idx: 2, pos_x: 1.7,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam, ins_idx: 3, pos_x: 0.7,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam, ins_idx: 4, pos_x: -1.1, pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam, ins_idx: 5, pos_x: -2.1, pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam, ins_idx: 6, pos_x: -4,   pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam, ins_idx: 7, pos_x: -4.5, pos_y: beam_y+0.5, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
+  object_update({ins_obj: beam, ins_idx: 1, pos_x: 4,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
+  object_update({ins_obj: beam, ins_idx: 2, pos_x: 2.8,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // : : | : : : : :
+  object_update({ins_obj: beam, ins_idx: 3, pos_x: 1.7,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
+  object_update({ins_obj: beam, ins_idx: 4, pos_x: 0.6,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
+  object_update({ins_obj: beam, ins_idx: 6, pos_x: -0.6, pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
+  object_update({ins_obj: beam, ins_idx: 5, pos_x: -1.7, pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
+  object_update({ins_obj: beam, ins_idx: 7, pos_x: -2.9,   pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
+  object_update({ins_obj: beam, ins_idx: 8, pos_x: -4,   pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
+  object_update({ins_obj: beam, ins_idx: 9, pos_x: -4.5, pos_y: beam_y+0.5, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
 
 
   beam_y += 0.5
+  const Podium_deck_start = Podium_deck_width/2
   for (let i = 0; i < 49; i++) {
-    object_update({ins_obj: beam_pillar_2, ins_idx: i, pos_x: 0.5, pos_y: beam_y, pos_z: beam_z-36 + i*1.5, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: beam_2, ins_idx: i, pos_x: 0.5, pos_y: beam_y-0.5, pos_z: beam_z-36 + i*1.5, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: beam_pillar_2, ins_idx: i, pos_x: 0.5, pos_y: beam_y, pos_z: beam_z-Podium_deck_start + i*beam_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: beam_2, ins_idx: i, pos_x: 0.5, pos_y: beam_y-0.5, pos_z: beam_z-Podium_deck_start + i*beam_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
   }
 
+  const Light_Spot_margin = ceiling_Spacing/2
   for (let i = 0; i < 6; i++) {
-    object_update({ins_obj: ceiling,  ins_idx: i, pos_x: 0.5, pos_y: beam_y-0.5, pos_z: beam_z-36+1.5/2*3 + i*1.5 * 9, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: cylinder, ins_idx: i*2, pos_x: 2.55, pos_y: beam_y-1.5, pos_z: beam_z-36+1.5/2*3 + i*1.5 * 9, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: cylinder, ins_idx: i*2+1, pos_x: -3, pos_y: beam_y-1.5, pos_z: beam_z-36+1.5/2*3 + i*1.5 * 9, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    createPointLight(0xffffff, 2, 10, [2.55, beam_y-1.05, beam_z-37.125 + 6.75 + i*1.5 * 9]);
-    createPointLight(0xffffff, 2, 10, [2.55, beam_y-1.05, beam_z-37.125 + 13.5 + i*1.5 * 9]);
-    createPointLight(0xffffff, 2, 10, [-3, beam_y-1.05, beam_z-37.125 + 6.75 + i*1.5 * 9]);
-    createPointLight(0xffffff, 2, 10, [-3, beam_y-1.05, beam_z-37.125 + 13.5 + i*1.5 * 9]);
+    object_update({ins_obj: ceiling,  ins_idx: i, pos_x: 0.5, pos_y: beam_y-0.5, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*ceiling_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: cylinder, ins_idx: i*2, pos_x: 2.8, pos_y: beam_y-1.5, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*ceiling_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: cylinder, ins_idx: i*2+1, pos_x: -2.9, pos_y: beam_y-1.5, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*ceiling_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    createPointLight(0xffffff, 2, 10, [2.55, beam_y-1.05, beam_z-Podium_deck_start+ beam_Spacing/2*3 - ceiling_Spacing/4 + Light_Spot_margin + i*ceiling_Spacing]);
+    createPointLight(0xffffff, 2, 10, [2.55, beam_y-1.05, beam_z-Podium_deck_start+ beam_Spacing/2*3 - ceiling_Spacing/4 + Light_Spot_margin*2 + i*ceiling_Spacing]);
+    createPointLight(0xffffff, 2, 10, [-2.9, beam_y-1.05, beam_z-Podium_deck_start+ beam_Spacing/2*3 - ceiling_Spacing/4 + Light_Spot_margin + i*ceiling_Spacing]);
+    createPointLight(0xffffff, 2, 10, [-2.9, beam_y-1.05, beam_z-Podium_deck_start+ beam_Spacing/2*3 - ceiling_Spacing/4 + Light_Spot_margin*2 + i*ceiling_Spacing]);
   }
 
-  const padding = 1.5
   for (let i = 0; i < 47; i++){
     // 3.5
-    object_update({ins_obj: prop, ins_idx: i*8,   pos_x: 3.55, pos_y: beam_y-0.8, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: prop, ins_idx: i*8+1, pos_x: 3.45, pos_y: beam_y-0.8, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: prop, ins_idx: i*8,   pos_x: 4.05, pos_y: beam_y-0.8, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*beam_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: prop, ins_idx: i*8+1, pos_x: 3.95, pos_y: beam_y-0.8, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*beam_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
     // 1.7
-    object_update({ins_obj: prop, ins_idx: i*8+2, pos_x: 1.75, pos_y: beam_y-0.8, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: prop, ins_idx: i*8+3, pos_x: 1.65, pos_y: beam_y-0.8, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: prop, ins_idx: i*8+2, pos_x: 1.75, pos_y: beam_y-0.8, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*beam_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: prop, ins_idx: i*8+3, pos_x: 1.65, pos_y: beam_y-0.8, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*beam_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
     // -2.1
-    object_update({ins_obj: prop, ins_idx: i*8+4, pos_x: -2.15, pos_y: beam_y-0.8, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: prop, ins_idx: i*8+5, pos_x: -2.05, pos_y: beam_y-0.8, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: prop, ins_idx: i*8+4, pos_x: -1.65, pos_y: beam_y-0.8, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*beam_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: prop, ins_idx: i*8+5, pos_x: -1.75, pos_y: beam_y-0.8, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*beam_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
     // -4
-    object_update({ins_obj: prop, ins_idx: i*8+6, pos_x: -3.95, pos_y: beam_y-0.8, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: prop, ins_idx: i*8+7, pos_x: -4.05, pos_y: beam_y-0.8, pos_z: beam_z-36+1.5/2*3 + i*padding, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: prop, ins_idx: i*8+6, pos_x: -3.95, pos_y: beam_y-0.8, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*beam_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: prop, ins_idx: i*8+7, pos_x: -4.05, pos_y: beam_y-0.8, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*beam_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
   }
 
   for (let i = 0; i < 4; i++){
-    object_update({ins_obj: board, ins_idx: i*4,   pos_x: 3.5,  pos_y: beam_y-1.05, pos_z: beam_z, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: board, ins_idx: i*4,   pos_x: 4,  pos_y: beam_y-1.05, pos_z: beam_z, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
     object_update({ins_obj: board, ins_idx: i*4+1, pos_x: 1.7,  pos_y: beam_y-1.05, pos_z: beam_z, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: board, ins_idx: i*4+2, pos_x: -2.1, pos_y: beam_y-1.05, pos_z: beam_z, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
+    object_update({ins_obj: board, ins_idx: i*4+2, pos_x: -1.7, pos_y: beam_y-1.05, pos_z: beam_z, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
     object_update({ins_obj: board, ins_idx: i*4+3, pos_x: -4,   pos_y: beam_y-1.05, pos_z: beam_z, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
   }
 
