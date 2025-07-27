@@ -229,8 +229,9 @@ function getPointsEveryM(curve, interval = 25) {
   const divisions = Math.floor(length / interval);
   const points = [];
 
+  let num = divisions
   for (let i = 0; i <= divisions; i++) {
-    const t = (interval * i) / length;
+    const t = Math.min((interval * i) / length,1);
     const point = curve.getPointAt(t).clone();
     points.push(point);
   }
@@ -238,17 +239,70 @@ function getPointsEveryM(curve, interval = 25) {
   return points;
 }
 
+// 線路から均等に空ける関数
+function RailMargin(points, margin){
+  const edit_points = structuredClone(points); // 深いコピーを作る（破壊防止）
+
+  for (let i = 0; i < points.length; i++){
+    const rear = i > 0 ? points[i - 1] : points[i];
+    const now = points[i];
+    const next = i < points.length-1 ? points[i + 1] : points[i];
+
+    let rear_atan2 = normalizeRad(Math.atan2(now.x - rear.x, now.z - rear.z));
+    let next_atan2 = normalizeRad(Math.atan2(now.x - next.x, now.z - next.z));
+    if (i === 0){
+      rear_atan2 = next_atan2 + 180 * Math.PI / 180;
+    } else if (i === points.length-1){
+      next_atan2 = rear_atan2 + 180 * Math.PI / 180;
+    }
+
+    let whole = next_atan2 - rear_atan2;
+    if (whole < 0) whole += Math.PI * 2;
+
+    const diff = rear_atan2 + whole * 0.5;
+
+    edit_points[i].x = now.x - Math.sin(diff) * margin;
+    edit_points[i].z = now.z - Math.cos(diff) * margin;
+  }
+
+  return edit_points;
+}
+
+
 // ホーム屋根 の作成
 function placePlatformRoof(track_1,track_2,y,quantity) {
+  
   const board_length_1 = track_1.getLength(track_1)/quantity;
   const board_length_2 = track_2.getLength(track_2)/quantity;
-  const points_1 = getPointsEveryM(track_1, board_length_1);
-  const points_2 = getPointsEveryM(track_2, board_length_2);
-
+  const points_1 = RailMargin(getPointsEveryM(track_1, board_length_1), 0.7);
+  const points_2 = RailMargin(getPointsEveryM(track_2, board_length_2), -0.7);
+  
   if (points_1.length != points_2.length){console.log('不均一')}
 
-  const material = new THREE.MeshStandardMaterial({ color: 0xffffff })
+
+  // 1. テクスチャ読み込み
+  const textureLoader = new THREE.TextureLoader();
+  const texture = textureLoader.load('textures/roof.png');
+
+  // 表示位置
+  texture.repeat.set(0.2, 0.2);   // サイズを50%
+  texture.offset.set(0.25, 0.25); // 真ん中に寄せる
   
+  // 2. 繰り返し設定
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+
+  // 3. 幾何体サイズ（例：10m × 5m）
+  const width = 0.6;
+  const height = 0.4;
+
+  // 4. 画像1枚 = 1m四方とみなして、自動で repeat を計算
+  texture.repeat.set(width / 1, height / 1);
+
+  // 5. マテリアルに貼る
+  const material = new THREE.MeshStandardMaterial({ map: texture });
+
+
   const diff_x = points_1[0].x - points_2[0].x
   const diff_z = points_1[0].z - points_2[0].z
 
@@ -258,9 +312,9 @@ function placePlatformRoof(track_1,track_2,y,quantity) {
     z: points_1[0].z - diff_z / 2
   }
 
-  let n = 0.8
   for (let i = 0; i < points_1.length-1; i++){
-  // for (let i = 0; i < 1; i++){
+
+    // for (let i = 0; i < 1; i++){
     const diff_x = points_1[i+1].x - points_2[i+1].x
     const diff_z = points_1[i+1].z - points_2[i+1].z
 
@@ -270,6 +324,8 @@ function placePlatformRoof(track_1,track_2,y,quantity) {
       z: points_1[i+1].z - diff_z / 2
     }
 
+    
+
     // １番線
     const corner_1 = {
       x: middle_0.x - middle_1.x, 
@@ -277,6 +333,13 @@ function placePlatformRoof(track_1,track_2,y,quantity) {
     const diff_rotation = 0 - Math.atan2(corner_1.x,corner_1.z)
     const fixes_rotation_1 = Math.atan2(corner_1.x,corner_1.z) + diff_rotation
     const radius_1 = Math.sqrt(corner_1.x**2 + corner_1.z**2)
+
+    const geometry = new THREE.BoxGeometry(0.15, 1.4, 0.15);
+    const roofpillar = new THREE.InstancedMesh(geometry, new THREE.MeshStandardMaterial({color: 0xaaaaaa}), 4);
+    roofpillar.position.x = middle_0.x-corner_1.x/2
+    roofpillar.position.y = y-1.1
+    roofpillar.position.z = middle_0.z-corner_1.z/2
+    scene.add(roofpillar)
 
     const corner_2 = {
       x: middle_0.x - points_1[i].x, 
@@ -290,11 +353,11 @@ function placePlatformRoof(track_1,track_2,y,quantity) {
     const fixes_rotation_3 = Math.atan2(corner_3.x,corner_3.z) + diff_rotation
     const radius_3 = Math.sqrt(corner_3.x**2 + corner_3.z**2)
 
-    Map_pin(middle_0.x,middle_0.z,15,0.05,0x00ff00)
-    Map_pin(points_1[i].x,points_1[i].z,15,0.05,0x0000ff)
+    // Map_pin(middle_0.x,middle_0.z,15,0.05,0x00ff00)
+    // Map_pin(points_1[i].x,points_1[i].z,15,0.05,0x0000ff)
 
-    Map_pin(middle_1.x,middle_1.z,15,0.05,0x00ff00)
-    Map_pin(points_1[i+1].x,points_1[i+1].z,15,0.05,0x0000ff)
+    // Map_pin(middle_1.x,middle_1.z,15,0.05,0x00ff00)
+    // Map_pin(points_1[i+1].x,points_1[i+1].z,15,0.05,0x0000ff)
 
     const board_1 = new THREE.Shape();
     board_1.moveTo(0, 0);
@@ -360,8 +423,8 @@ function placePlatformRoof(track_1,track_2,y,quantity) {
     const fixes_rotation2_3 = Math.atan2(corner2_3.x,corner2_3.z) + diff_rotation2
     const radius2_3 = Math.sqrt(corner2_3.x**2 + corner2_3.z**2)
 
-    Map_pin(points_2[i].x,points_2[i].z,15,0.05,0xff0000)
-    Map_pin(points_2[i+1].x,points_2[i+1].z,15,0.05,0x000000)
+    // Map_pin(points_2[i].x,points_2[i].z,15,0.05,0xff0000)
+    // Map_pin(points_2[i+1].x,points_2[i+1].z,15,0.05,0x000000)
 
     const board2_1 = new THREE.Shape();
     board2_1.moveTo(0, 0);
@@ -847,8 +910,6 @@ Points_3 = [
   new THREE.Vector3(-9, y, 90),
 ];
 
-Map_pin(8,-50,15,0.5,0xff0000)
-
 // 指定したポイントから線(線路の軌道)を生成
 const line_1 = new THREE.CatmullRomCurve3(Points_0);
 const line_2 = new THREE.CatmullRomCurve3(Points_1);
@@ -895,7 +956,11 @@ const roof_start = 0.4;
 const roof_end = 0.675;
 const roof_track1 = sliceCurvePoints(line_1, roof_start, roof_end);
 const roof_track2 = sliceCurvePoints(line_2, roof_start, roof_end);
-placePlatformRoof(roof_track1,roof_track2,y+1.5,10)
+placePlatformRoof(roof_track1,roof_track2,y+1.4,10)
+
+const roof_track3 = sliceCurvePoints(line_3, roof_start, roof_end);
+const roof_track4 = sliceCurvePoints(line_4, roof_start, 0.6846);
+placePlatformRoof(roof_track3,roof_track4,y+1.4,10)
 
 // 駅(ホームドア)を生成
 const train_width = 6.8
@@ -1322,7 +1387,7 @@ if (true) {
     return light;
   }  
 
-  let beam_y = 9.5
+  let beam_y = 9.4
   let beam_z = 20
   object_update({ins_obj: beam_pillar, ins_idx: 0, pos_x: 5.5,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // | : : : : : : :
   object_update({ins_obj: beam_pillar, ins_idx: 1, pos_x: 4,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // : | : : : : : :
