@@ -250,6 +250,273 @@ const test = new THREE.CatmullRomCurve3([
 // ③ アニメーション
 updateObjectOnPath(test);
 
+// --- エレベーター🛗 ---
+// const glassMaterial = new THREE.MeshPhysicalMaterial({
+//   color: 0xFFFFFF,
+//   metalness: 0,
+//   roughness: 0,
+//   transmission: 1, // 光の透過率 (1で完全に透明)
+//   thickness: 0.5,  // ガラスの厚み
+//   transparent: true,
+//   opacity: 1,
+//   side: THREE.DoubleSide, // 両面表示（必要なら）
+//   clearcoat: 1.0,
+//   clearcoatRoughness: 0.1
+// });
+
+// const glassGeometry = new THREE.BoxGeometry(1, 1, 0.1);
+// const glassMesh = new THREE.Mesh(glassGeometry, glassMaterial);
+// glassMesh.position.set(2,7,0)
+// scene.add(glassMesh);
+
+const glass_material = new THREE.MeshStandardMaterial({
+  color: 0xccccff,         // 白ベース
+  transparent: true,       // 透明を有効に
+  opacity: 0.1,            // 透明度（0: 完全透明）
+  roughness: 0.05,         // 表面のザラザラ感（低いほどつるつる）
+  metalness: 0.5,          // 金属度（高いほど光沢が強く反射）
+  envMapIntensity: 1.0,    // 環境マップの反射強度（envMapを使うなら）
+  side: THREE.DoubleSide   // 両面描画（必要なら）
+});
+
+const elevatorY = 7.1
+const elevatorz = 36
+
+let glassGeometry = new THREE.BoxGeometry(1.2, 1, 0.05);
+let glassMesh = new THREE.Mesh(glassGeometry, glass_material);
+glassMesh.position.set(2.7,elevatorY,elevatorz)
+scene.add(glassMesh);
+
+glassGeometry = new THREE.BoxGeometry(1.2, 1, 0.05);
+glassMesh = new THREE.Mesh(glassGeometry, glass_material);
+glassMesh.position.set(2.7,elevatorY,elevatorz+2)
+scene.add(glassMesh);
+
+const glassGeometry3 = new THREE.BoxGeometry(0.05, 1, 2);
+const glassMesh3 = new THREE.Mesh(glassGeometry3, glass_material);
+glassMesh3.position.set(2.1,elevatorY,elevatorz+1)
+scene.add(glassMesh3);
+
+glassGeometry = new THREE.BoxGeometry(0.05, 1, 2);
+glassMesh = new THREE.Mesh(glassGeometry, glass_material);
+glassMesh.position.set(3.3,elevatorY,elevatorz+1)
+scene.add(glassMesh);
+
+const pillar_material = new THREE.MeshStandardMaterial({
+  color: 0x666666,         // 濃いグレー（鉄っぽい色）
+  metalness: 0.5,          // 完全な金属
+  roughness: 0.3,          // 少しザラつき（0.0だと鏡面すぎる）
+  envMapIntensity: 0.5,    // 環境マップの反射強度（あるとリアル）
+  side: THREE.FrontSide,   // 通常は片面でOK
+});
+
+let ceilingGeometry = new THREE.BoxGeometry(0.1, 3, 0.1);
+let ceilingMesh = new THREE.Mesh(ceilingGeometry, pillar_material);
+ceilingMesh.position.set(3.3,elevatorY,elevatorz+1)
+scene.add(ceilingMesh);
+
+const door_material = new THREE.MeshStandardMaterial({
+  color: 0x888888,         // 濃いグレー（鉄っぽい色）
+  metalness: 0.5,          // 完全な金属
+  roughness: 0.3,          // 少しザラつき（0.0だと鏡面すぎる）
+  envMapIntensity: 1.0,    // 環境マップの反射強度（あるとリアル）
+  side: THREE.FrontSide,   // 通常は片面でOK
+});
+
+let doorGeometry = new THREE.BoxGeometry(0.2, 1, 0.01);
+let doorMesh = new THREE.Mesh(doorGeometry, door_material);
+doorMesh.position.set(3,elevatorY,elevatorz+1)
+
+
+// グループを作成
+const ElevatorDoorGroup_A1 = new THREE.Group();
+
+doorGeometry = new THREE.BoxGeometry(0.1, 0.3, 0.01);
+doorMesh = new THREE.Mesh(doorGeometry, door_material);
+doorMesh.position.set(3,elevatorY-0.35,elevatorz+1)
+ElevatorDoorGroup_A1.add(doorMesh);
+
+doorGeometry = new THREE.BoxGeometry(0.1, 0.2, 0.01);
+doorMesh = new THREE.Mesh(doorGeometry, door_material);
+doorMesh.position.set(3,elevatorY+0.4,elevatorz+1)
+ElevatorDoorGroup_A1.add(doorMesh);
+
+doorGeometry = new THREE.BoxGeometry(0.05, 1, 0.01);
+doorMesh = new THREE.Mesh(doorGeometry, door_material);
+doorMesh.position.set(3.075,elevatorY,elevatorz+1)
+ElevatorDoorGroup_A1.add(doorMesh);
+
+doorGeometry = new THREE.BoxGeometry(0.05, 1, 0.01);
+doorMesh = new THREE.Mesh(doorGeometry, door_material);
+doorMesh.position.set(2.925,elevatorY,elevatorz+1)
+ElevatorDoorGroup_A1.add(doorMesh);
+
+const ElevatorDoorGroup_A2 = ElevatorDoorGroup_A1.clone(true); // true で子も含めてディープコピー
+const ElevatorDoorGroup_B1 = ElevatorDoorGroup_A1.clone(true); // true で子も含めてディープコピー
+const ElevatorDoorGroup_B2 = ElevatorDoorGroup_A1.clone(true); // true で子も含めてディープコピー
+const ElevatorDoorGroup_C1 = ElevatorDoorGroup_A1.clone(true); // true で子も含めてディープコピー
+const ElevatorDoorGroup_C2 = ElevatorDoorGroup_A1.clone(true); // true で子も含めてディープコピー
+
+ElevatorDoorGroup_A1.position.set(0, 0, 0);
+ElevatorDoorGroup_A2.position.set(-0.2, 0, 0);
+
+ElevatorDoorGroup_B1.position.set(0, 3.5, 0);
+ElevatorDoorGroup_B2.position.set(-0.2, 3.5, 0);
+
+ElevatorDoorGroup_C1.position.set(0, 0, -0.05);
+ElevatorDoorGroup_C2.position.set(-0.2, 0, -0.05);
+
+// グループをシーンに追加
+scene.add(ElevatorDoorGroup_A1);
+scene.add(ElevatorDoorGroup_A2);
+scene.add(ElevatorDoorGroup_B1);
+scene.add(ElevatorDoorGroup_B2);
+scene.add(ElevatorDoorGroup_C1);
+scene.add(ElevatorDoorGroup_C2);
+
+// グループ全体を移動
+// 一定時間待つ関数
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ドア開閉アニメーション
+async function elevator_door_open(
+  ElevatorDoorGroup_1,
+  ElevatorDoorGroup_2,
+  ElevatorDoorGroup_3,
+  ElevatorDoorGroup_4
+) {
+  const range_num = 100;
+  const xOffset = 0.2 / range_num;
+
+  // ドアを開ける（徐々に）
+  for (let i = 0; i <= range_num; i++) {
+    ElevatorDoorGroup_1.position.x += xOffset;
+    ElevatorDoorGroup_2.position.x += -xOffset;
+
+    // 内側は少し遅れて動き始める
+    if (i > range_num * 0.2) {
+      ElevatorDoorGroup_3.position.x += xOffset;
+      ElevatorDoorGroup_4.position.x += -xOffset;
+    }
+
+    await sleep(25);
+  }
+
+  // 🔁 内側ドアの残り 0.2 分を追加で動かす
+  const delayedSteps = Math.floor(range_num * 0.2);
+  for (let i = 0; i < delayedSteps; i++) {
+    ElevatorDoorGroup_3.position.x += xOffset;
+    ElevatorDoorGroup_4.position.x += -xOffset;
+    await sleep(25);
+  }
+
+  await sleep(7000);
+
+  // ドアを閉める（徐々に）
+  for (let i = range_num; i >= 0; i--) {
+    ElevatorDoorGroup_1.position.x += -xOffset;
+    ElevatorDoorGroup_2.position.x += xOffset;
+
+    if (i < range_num * 0.8) {  // 外側が先に閉まり、内側は少し遅れて
+      ElevatorDoorGroup_3.position.x += -xOffset;
+      ElevatorDoorGroup_4.position.x += xOffset;
+    }
+
+    await sleep(25);
+  }
+
+  // 🔁 内側ドアの残り 0.2 分を追加で閉じる
+  for (let i = 0; i < delayedSteps; i++) {
+    ElevatorDoorGroup_3.position.x += -xOffset;
+    ElevatorDoorGroup_4.position.x += xOffset;
+    await sleep(25);
+  }
+
+}
+
+function getSleepTime(i, range_num, steps) {
+  const slowRange = range_num * 0.15; // 10%部分の全ステップ数
+  const stepSize = slowRange / steps; // 1段階あたりのステップ数
+
+  if (i < slowRange) {
+    // 最初の10%（加速）: 何段階目か計算
+    const currentStep = Math.floor(i / stepSize);
+    // sleep時間を段階ごとに段階的に減らす（30ms→10ms）
+    const sleepStart = 30;
+    const sleepEnd = 10;
+    const sleepDiff = sleepStart - sleepEnd;
+    const sleepTime = sleepStart - (sleepDiff / (steps - 1)) * currentStep;
+    return sleepTime;
+
+  } else if (i >= range_num - slowRange) {
+    // 最後の10%（減速）: 何段階目か計算
+    const currentStep = Math.floor((i - (range_num - slowRange)) / stepSize);
+    const sleepStart = 10;
+    const sleepEnd = 30;
+    const sleepDiff = sleepEnd - sleepStart;
+    const sleepTime = sleepStart + (sleepDiff / (steps - 1)) * currentStep;
+    return sleepTime;
+
+  } else {
+    // 中央80%は一定速度
+    return 10;
+  }
+}
+
+
+// 無限ループで繰り返し（止めたいなら条件を追加）
+async function startLoop() {
+  while (true) {
+    await elevator_door_open(
+      ElevatorDoorGroup_A1,
+      ElevatorDoorGroup_A2,
+      ElevatorDoorGroup_C1,
+      ElevatorDoorGroup_C2
+    );
+    await sleep(3000); // 3秒待ってからまた開ける
+
+    // Cドアを y+方向へスライド（内側ドアを上に移動して2階へ）
+    const F2_y = 3.5
+    const range_num = 1800
+    const yOffset = F2_y/range_num
+    const steps = 30
+    
+    for (let i = 0; i < range_num; i++) {
+      ElevatorDoorGroup_C1.position.y += yOffset;
+      ElevatorDoorGroup_C2.position.y += yOffset;
+    
+      const sleepTime = getSleepTime(i, range_num, steps);
+      await sleep(sleepTime);
+    }
+
+    await sleep(3000); // 3秒待ってからまた開ける
+
+    await elevator_door_open(
+      ElevatorDoorGroup_B1,
+      ElevatorDoorGroup_B2,
+      ElevatorDoorGroup_C1,
+      ElevatorDoorGroup_C2
+    );
+    await sleep(3000); // 3秒待ってからまた開ける
+
+
+    for (let i = 0; i < range_num; i++) {
+      ElevatorDoorGroup_C1.position.y -= yOffset;
+      ElevatorDoorGroup_C2.position.y -= yOffset;
+    
+      const sleepTime = getSleepTime(i, range_num, steps);
+      await sleep(sleepTime);
+    }
+
+    await sleep(3000); // 3秒待ってからまた開ける
+  }
+}
+
+startLoop(); // 処理開始
+
+
 // --- 鉄橋用ユーティリティ ---
 // 柱
 function createBridgePillar(x, z, height = 5) {
