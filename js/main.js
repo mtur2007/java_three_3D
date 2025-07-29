@@ -1,6 +1,17 @@
 // --- 基本設定 ---
 
 const scene = new THREE.Scene();
+
+const envMap = new THREE.CubeTextureLoader()
+  .setPath('https://threejs.org/examples/textures/cube/Bridge2/')
+  .load([
+    'posx.jpg','negx.jpg',
+    'posy.jpg','negy.jpg',
+    'posz.jpg','negz.jpg'
+  ]);
+scene.environment = envMap;
+scene.background = envMap;
+
 const camera = new THREE.PerspectiveCamera(
   75, window.innerWidth / window.innerHeight, 0.1, 1000
 );
@@ -272,7 +283,7 @@ updateObjectOnPath(test);
 const glass_material = new THREE.MeshStandardMaterial({
   color: 0xccccff,         // 白ベース
   transparent: true,       // 透明を有効に
-  opacity: 0.1,            // 透明度（0: 完全透明）
+  opacity: 0.3,            // 透明度（0: 完全透明）
   roughness: 0.05,         // 表面のザラザラ感（低いほどつるつる）
   metalness: 0.5,          // 金属度（高いほど光沢が強く反射）
   envMapIntensity: 1.0,    // 環境マップの反射強度（envMapを使うなら）
@@ -287,19 +298,19 @@ let glassMesh = new THREE.Mesh(glassGeometry, glass_material);
 glassMesh.position.set(2.7,elevatorY,elevatorz)
 scene.add(glassMesh);
 
-glassGeometry = new THREE.BoxGeometry(1.2, 1, 0.05);
+glassGeometry = new THREE.BoxGeometry(0.5, 1, 0.05);
 glassMesh = new THREE.Mesh(glassGeometry, glass_material);
-glassMesh.position.set(2.7,elevatorY,elevatorz+2)
+glassMesh.position.set(2.3,elevatorY,elevatorz+1)
 scene.add(glassMesh);
 
-const glassGeometry3 = new THREE.BoxGeometry(0.05, 1, 2);
+const glassGeometry3 = new THREE.BoxGeometry(0.05, 1, 1);
 const glassMesh3 = new THREE.Mesh(glassGeometry3, glass_material);
-glassMesh3.position.set(2.1,elevatorY,elevatorz+1)
+glassMesh3.position.set(2.1,elevatorY,elevatorz+0.5)
 scene.add(glassMesh3);
 
-glassGeometry = new THREE.BoxGeometry(0.05, 1, 2);
+glassGeometry = new THREE.BoxGeometry(0.05, 1, 1);
 glassMesh = new THREE.Mesh(glassGeometry, glass_material);
-glassMesh.position.set(3.3,elevatorY,elevatorz+1)
+glassMesh.position.set(3.3,elevatorY,elevatorz+0.5)
 scene.add(glassMesh);
 
 const pillar_material = new THREE.MeshStandardMaterial({
@@ -316,12 +327,18 @@ ceilingMesh.position.set(3.3,elevatorY,elevatorz+1)
 scene.add(ceilingMesh);
 
 const door_material = new THREE.MeshStandardMaterial({
-  color: 0x888888,         // 濃いグレー（鉄っぽい色）
-  metalness: 0.5,          // 完全な金属
-  roughness: 0.3,          // 少しザラつき（0.0だと鏡面すぎる）
-  envMapIntensity: 1.0,    // 環境マップの反射強度（あるとリアル）
-  side: THREE.FrontSide,   // 通常は片面でOK
+  color: 0x888888,
+  metalness: 0.8,
+  roughness: 0.1,
+  envMapIntensity: 1.0,
+  side: THREE.DoubleSide, // 念のため両面表示
 });
+
+// 光源（必須）
+// const test_light = new THREE.DirectionalLight(0xffffff, 1.2);
+// test_light.position.set(3, elevatorY, elevatorz);
+// scene.add(test_light);
+// scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 
 let doorGeometry = new THREE.BoxGeometry(0.2, 1, 0.01);
 let doorMesh = new THREE.Mesh(doorGeometry, door_material);
@@ -358,13 +375,13 @@ const ElevatorDoorGroup_C1 = ElevatorDoorGroup_A1.clone(true); // true で子も
 const ElevatorDoorGroup_C2 = ElevatorDoorGroup_A1.clone(true); // true で子も含めてディープコピー
 
 ElevatorDoorGroup_A1.position.set(0, 0, 0);
-ElevatorDoorGroup_A2.position.set(-0.2, 0, 0);
+ElevatorDoorGroup_A2.position.set(-0.2, 0, 0.02);
 
 ElevatorDoorGroup_B1.position.set(0, 3.5, 0);
-ElevatorDoorGroup_B2.position.set(-0.2, 3.5, 0);
+ElevatorDoorGroup_B2.position.set(-0.2, 3.5, 0.02);
 
 ElevatorDoorGroup_C1.position.set(0, 0, -0.05);
-ElevatorDoorGroup_C2.position.set(-0.2, 0, -0.05);
+ElevatorDoorGroup_C2.position.set(-0.2, 0, -0.03);
 
 // グループをシーンに追加
 scene.add(ElevatorDoorGroup_A1);
@@ -392,12 +409,12 @@ async function elevator_door_open(
 
   // ドアを開ける（徐々に）
   for (let i = 0; i <= range_num; i++) {
-    ElevatorDoorGroup_1.position.x += xOffset;
+    ElevatorDoorGroup_1.position.x += -xOffset*2;
     ElevatorDoorGroup_2.position.x += -xOffset;
 
     // 内側は少し遅れて動き始める
     if (i > range_num * 0.2) {
-      ElevatorDoorGroup_3.position.x += xOffset;
+      ElevatorDoorGroup_3.position.x += -xOffset*2;
       ElevatorDoorGroup_4.position.x += -xOffset;
     }
 
@@ -407,7 +424,7 @@ async function elevator_door_open(
   // 🔁 内側ドアの残り 0.2 分を追加で動かす
   const delayedSteps = Math.floor(range_num * 0.2);
   for (let i = 0; i < delayedSteps; i++) {
-    ElevatorDoorGroup_3.position.x += xOffset;
+    ElevatorDoorGroup_3.position.x += -xOffset*2;
     ElevatorDoorGroup_4.position.x += -xOffset;
     await sleep(25);
   }
@@ -416,11 +433,11 @@ async function elevator_door_open(
 
   // ドアを閉める（徐々に）
   for (let i = range_num; i >= 0; i--) {
-    ElevatorDoorGroup_1.position.x += -xOffset;
+    ElevatorDoorGroup_1.position.x += xOffset*2;
     ElevatorDoorGroup_2.position.x += xOffset;
 
     if (i < range_num * 0.8) {  // 外側が先に閉まり、内側は少し遅れて
-      ElevatorDoorGroup_3.position.x += -xOffset;
+      ElevatorDoorGroup_3.position.x += xOffset*2;
       ElevatorDoorGroup_4.position.x += xOffset;
     }
 
@@ -429,7 +446,7 @@ async function elevator_door_open(
 
   // 🔁 内側ドアの残り 0.2 分を追加で閉じる
   for (let i = 0; i < delayedSteps; i++) {
-    ElevatorDoorGroup_3.position.x += -xOffset;
+    ElevatorDoorGroup_3.position.x += xOffset*2;
     ElevatorDoorGroup_4.position.x += xOffset;
     await sleep(25);
   }
@@ -933,11 +950,17 @@ function placeTrainDoors(centerX, centerY, centerZ, angle, track_doors, totalLen
   
     track_doors.add(door_0);
     track_doors.add(door_1);
+    const fence_material = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      metalness: 0.7,
+      roughness: 0.2,
+      envMapIntensity: 1.0,
+      side: THREE.DoubleSide, // 念のため両面表示 
+    });
 
     // 柵(非開閉部分)（横:可変長, 高さ0.45m, 厚さ0.07m）
     if ( i === 0 ){
       const fence_geometry = new THREE.BoxGeometry(0.07, 0.45, half_fence);
-      const fence_material = new THREE.MeshStandardMaterial({ color: 0xffffff });
       const fence = new THREE.Mesh(fence_geometry, fence_material);
       
       // 高さ中央をY=ドア中心に（例：y+1）
@@ -948,7 +971,6 @@ function placeTrainDoors(centerX, centerY, centerZ, angle, track_doors, totalLen
     
     if (i === 3) {
       const fence_geometry = new THREE.BoxGeometry(0.07, 0.45, half_fence);
-      const fence_material = new THREE.MeshStandardMaterial({ color: 0xffffff });
       const fence = new THREE.Mesh(fence_geometry, fence_material);
 
       // 高さ中央をY=ドア中心に（例：y+1）
@@ -958,7 +980,6 @@ function placeTrainDoors(centerX, centerY, centerZ, angle, track_doors, totalLen
 
     } else {
       const fence_geometry = new THREE.BoxGeometry(0.07, 0.45, fenceLength);
-      const fence_material = new THREE.MeshStandardMaterial({ color: 0xffffff });
       const fence = new THREE.Mesh(fence_geometry, fence_material);
 
       // 高さ中央をY=ドア中心に（例：y+1）
@@ -1022,35 +1043,38 @@ function TrainSettings(
     return texture;
   }
 
+  const metalness_num = 0.8
+  const roughness_num = 0.8
+  const envMapIntensity_num = 1.0
   // 指定されたテクスチャセットをもとにマテリアル6面分を生成
   function createMaterials(set) {
     const sideRightMat = set.side_right
-      ? new THREE.MeshStandardMaterial({ map: loadTexture(set.side_right), transparent: true, opacity: transparency })
+      ? new THREE.MeshStandardMaterial({ map: loadTexture(set.side_right),   transparent: true, opacity: transparency, metalness: metalness_num, roughness: roughness_num, envMap: scene.environment, envMapIntensity: envMapIntensity_num })
       : set.side
-        ? new THREE.MeshStandardMaterial({ map: loadTexture(set.side), transparent: true, opacity: transparency })
-        : new THREE.MeshStandardMaterial({ color, transparent: true, opacity: transparency });
+        ? new THREE.MeshStandardMaterial({ map: loadTexture(set.side), transparent: true, opacity: transparency, metalness: metalness_num, roughness: roughness_num, envMap: scene.environment, envMapIntensity: envMapIntensity_num })
+        : new THREE.MeshStandardMaterial({ color, transparent: true, opacity: transparency, metalness: metalness_num, roughness: roughness_num, envMap: scene.environment, envMapIntensity: envMapIntensity_num });
 
     const sideLeftMat = set.side_left
-      ? new THREE.MeshStandardMaterial({ map: loadTexture(set.side_left), transparent: true, opacity: transparency }) // 反転なし
+      ? new THREE.MeshStandardMaterial({ map: loadTexture(set.side_left), transparent: true, opacity: transparency, metalness: metalness_num, roughness: roughness_num, envMap: scene.environment, envMapIntensity: envMapIntensity_num }) // 反転なし
       : set.side
-        ? new THREE.MeshStandardMaterial({ map: loadTexture(set.side), transparent: true, opacity: transparency })
+        ? new THREE.MeshStandardMaterial({ map: loadTexture(set.side), transparent: true, opacity: transparency, metalness: metalness_num, roughness: roughness_num, envMap: scene.environment, envMapIntensity: envMapIntensity_num })
         : sideRightMat.clone();
 
     const topMat = set.top
-      ? new THREE.MeshStandardMaterial({ map: loadTexture(set.top), transparent: true, opacity: transparency })
-      : new THREE.MeshStandardMaterial({ color, transparent: true, opacity: transparency });
+      ? new THREE.MeshStandardMaterial({ map: loadTexture(set.top), transparent: true, opacity: transparency, metalness: metalness_num, roughness: roughness_num, envMap: scene.environment, envMapIntensity: envMapIntensity_num })
+      : new THREE.MeshStandardMaterial({ color, transparent: true, opacity: transparency, metalness: metalness_num, roughness: roughness_num, envMap: scene.environment, envMapIntensity: envMapIntensity_num });
 
     const bottomMat = set.bottom
-      ? new THREE.MeshStandardMaterial({ map: loadTexture(set.bottom), transparent: true, opacity: transparency })
+      ? new THREE.MeshStandardMaterial({ map: loadTexture(set.bottom), transparent: true, opacity: transparency, metalness: metalness_num, roughness: roughness_num, envMap: scene.environment, envMapIntensity: envMapIntensity_num })
       : topMat.clone();
 
     const frontMat = set.front
-      ? new THREE.MeshStandardMaterial({ map: loadTexture(set.front), transparent: true, opacity: transparency })
-      : new THREE.MeshStandardMaterial({ color, transparent: true, opacity: transparency });
+      ? new THREE.MeshStandardMaterial({ map: loadTexture(set.front), transparent: true, opacity: transparency, metalness: metalness_num, roughness: roughness_num, envMap: scene.environment, envMapIntensity: envMapIntensity_num })
+      : new THREE.MeshStandardMaterial({ color, transparent: true, opacity: transparency, metalness: metalness_num, roughness: roughness_num, envMap: scene.environment, envMapIntensity: envMapIntensity_num });
 
     const backMat = set.back
-      ? new THREE.MeshStandardMaterial({ map: loadTexture(set.back), transparent: true, opacity: transparency })
-      : new THREE.MeshStandardMaterial({ color, transparent: true, opacity: transparency });
+      ? new THREE.MeshStandardMaterial({ map: loadTexture(set.back), transparent: true, opacity: transparency, metalness: metalness_num, roughness: roughness_num, envMap: scene.environment, envMapIntensity: envMapIntensity_num })
+      : new THREE.MeshStandardMaterial({ color, transparent: true, opacity: transparency, metalness: metalness_num, roughness: roughness_num, envMap: scene.environment, envMapIntensity: envMapIntensity_num });
 
     // 面の順番：[右, 左, 上, 下, 前, 後]
     return [
@@ -1075,6 +1099,7 @@ function TrainSettings(
     } else {
       textureSet = textureMiddle;
     }
+    
 
     const materials = createMaterials(textureSet);
     const car = new THREE.Mesh(geo, materials.map(m => m.clone()));
@@ -1693,6 +1718,7 @@ if (true) {
     color: 0xffffff,      // 明るめのグレー（鉄色）
     metalness: 0.3,       // 金属光沢最大
     roughness: 0.25,      // 少しザラザラ（低くするとツルツル）
+    envMapIntensity: 1.0,    // 環境マップの反射強度（envMapを使うなら）
     side: THREE.DoubleSide,
   };
 
@@ -1701,6 +1727,7 @@ if (true) {
     color: 0xffffff,      // 暗めのグレー（鉄色）
     metalness: 0.5,       // 金属光沢最大
     roughness: 0.0,       // 少しザラザラ（低くするとツルツル）
+    envMapIntensity: 1.0,    // 環境マップの反射強度（envMapを使うなら）
     side: THREE.DoubleSide,
   };
 
