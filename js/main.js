@@ -84,14 +84,171 @@ function createTrack(curve, color = 0x333333) {
   scene.add(line);
 }
 
-// エスカレーター軌道表示
-// function createPathMesh(path, segments = 100, radius = 0.02, radialSegments = 8, closed = true, color = 0x00ff00) {
-//   const geometry = new THREE.TubeGeometry(path, segments, radius, radialSegments, closed);
-//   const material = new THREE.MeshBasicMaterial({ color: color });
-//   const mesh = new THREE.Mesh(geometry, material);
-//   return mesh;
-// }
+// --- エスカレーター ---
 
+// エスカレーター軌道表示
+function createPathMesh(path, segments = 100, radius = 0.02, radialSegments = 8, closed = false, color = 0x00ff00) {
+  const geometry = new THREE.TubeGeometry(path, segments, radius, radialSegments, closed);
+  const material = new THREE.MeshBasicMaterial({ color: color });
+  const mesh = new THREE.Mesh(geometry, material);
+  return mesh;
+}
+
+function updateObjectOnPath(path, time=0, speed=0.0005) {
+  const Equal_path = getPointsEveryM(path, 0.005); // spacing=0.1mごと（細かすぎたら25に）
+  const length = path.getLength(path);
+  const step_depth = 0.3
+  const depth_idx = step_depth/length
+  const steps_num = Math.floor(length/step_depth)
+  const step_diff = depth_idx * steps_num
+  const steps = createSteps(steps_num);
+  const leng = Equal_path.length-1
+
+  // 1. 長方形の幅と高さを指定（例：幅3、高さ1.5）
+  const width = 0.6;
+  const height = 1;
+
+  // 2. 形状を作成（PlaneGeometry はXZ平面ではなくXY平面）
+  const geometry = new THREE.PlaneGeometry(height, width);
+
+  const textureLoader = new THREE.TextureLoader();
+  const texture = textureLoader.load('textures/roof.png'); // ← パスを適宜変更
+  texture.colorSpace = THREE.SRGBColorSpace;
+
+  // 3. マテリアル（色やテクスチャ）を設定
+  const material = new THREE.MeshBasicMaterial({
+    map: texture,
+    // color: 0x00ff00,
+    side: THREE.DoubleSide // 裏からも見えるようにする
+  });
+
+  // 4. メッシュを作成してシーンに追加
+  const rectangle = new THREE.Mesh(geometry, material);
+
+  rectangle.rotation.x = -Math.PI/2;
+  // rectangle.rotation.z = -Math.PI/2;
+  const point = 0
+  rectangle.position.set(Equal_path[point].x,Equal_path[point].y+0.085,Equal_path[point].z); 
+  scene.add(rectangle);
+
+  const rectangle2 = new THREE.Mesh(geometry, material);
+  rectangle2.rotation.x = -Math.PI/2;
+  const point2 = Math.floor(leng * step_diff)
+  rectangle2.position.set(Equal_path[point2].x,Equal_path[point2].y+0.085,Equal_path[point2].z); 
+  scene.add(rectangle2);
+
+  function moveObject(){
+    for (let i =0; i < steps_num; i++){
+      const pos = Equal_path[Math.floor(leng*((time+i*depth_idx)%step_diff))]; // 位置だけ取得
+      steps[i].position.copy(pos);
+    }
+    if (time >= step_diff){time = 0}else{time+=speed};
+    requestAnimationFrame(moveObject);
+  };
+  moveObject();
+}  
+
+// 斜め前カットのステップ形状を返す関数
+function createEscalatorStepMesh() {
+  const shape = new THREE.Shape();
+  shape.moveTo(0.3, 0.15);    // 1. 上奥  
+  shape.lineTo(0, 0.15);      // 2. 上手前 2 . - . 1
+  shape.lineTo(0.015, 0.075); // 3. 中手前  3 .  |
+  shape.lineTo(0.06, -0.015); // 4. 下       4  .
+  // shape.lineTo(0.015, 0.075); // 3. 上手前
+  // shape.lineTo(0, 0.15);      // 2. 中手前
+
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: 0.8,               // ステップの奥行き
+    bevelEnabled: false,
+  });
+
+  const textureLoader = new THREE.TextureLoader();
+  const texture = textureLoader.load('textures/step.png'); // ← パスを適宜変更
+  texture.colorSpace = THREE.SRGBColorSpace;
+
+  const material = new THREE.MeshStandardMaterial({
+    map: texture,           // ← テクスチャ画像を適用
+    color: 0xffffff,        // ← 色も併用可能（色 × テクスチャ）
+  });
+
+  geometry.center(); // ← これを追加すると原点中心になります
+
+  const mesh = new THREE.Mesh(geometry, material);
+  // 形状が縦に立っているので寝かせる
+  mesh.rotation.y = -Math.PI / 2;
+  return mesh;
+}
+
+
+function createSteps(numSteps = 5) {
+  const group = [];
+
+  for (let i = 0; i < numSteps; i++) {
+    const step = createEscalatorStepMesh();
+
+    // ステップを少しずつ後ろに配置（例：0.3m間隔）
+    step.position.y = 0; // 高さは固定
+    step.position.z = i * -0.35; // 奥に並べる
+
+    scene.add(step);
+    group.push(step);
+  }
+
+  return group;
+}
+
+let path_x = 2.8
+let path_y = 6.536
+let path_z = 20.2
+// ② 軌道を定義
+const path_1 = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(path_x, 0+path_y, -3.42+path_z),
+  new THREE.Vector3(path_x, 0+path_y, -3+path_z),
+  new THREE.Vector3(path_x, 0.1+path_y, -2+path_z),
+  new THREE.Vector3(path_x, 3.28+path_y, 3.7+path_z),
+  new THREE.Vector3(path_x, 3.38+path_y, 4.7+path_z),
+  new THREE.Vector3(path_x, 3.38+path_y, 5.2+path_z),
+]);
+
+// const pathMesh = createPathMesh(path_1);
+// scene.add(pathMesh);
+
+// ③ アニメーション
+updateObjectOnPath(path_1);
+path_x = -2.8
+// ② 軌道を定義
+const path_2 = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(path_x, 0+path_y, -3.42+path_z),
+  new THREE.Vector3(path_x, 0+path_y, -3+path_z),
+  new THREE.Vector3(path_x, 0.1+path_y, -2+path_z),
+  new THREE.Vector3(path_x, 3.28+path_y, 3.7+path_z),
+  new THREE.Vector3(path_x, 3.38+path_y, 4.7+path_z),
+  new THREE.Vector3(path_x, 3.38+path_y, 5.2+path_z),
+]);
+
+// const pathMesh_2 = createPathMesh(path_2);
+// scene.add(pathMesh_2);
+
+// ③ アニメーション
+updateObjectOnPath(path_2);
+
+path_x = 15
+// ② 軌道を定義
+const test = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(path_x, 0+path_y, -3.42+path_z),
+  new THREE.Vector3(path_x, 0+path_y, -3+path_z),
+  new THREE.Vector3(path_x, 0.1+path_y, -2+path_z),
+  new THREE.Vector3(path_x, 3.28+path_y, 3.7+path_z),
+  new THREE.Vector3(path_x, 3.38+path_y, 4.7+path_z),
+  new THREE.Vector3(path_x, 3.38+path_y, 5.2+path_z),
+]);
+
+// const pathMesh_2 = createPathMesh(path_2);
+// scene.add(pathMesh_2);
+
+// ③ アニメーション
+updateObjectOnPath(test);
 
 // --- 鉄橋用ユーティリティ ---
 // 柱
@@ -137,6 +294,7 @@ function generateBridge(curve, pillarInterval = 10, interval = 25) {
   }
 }
 
+// --- 駅用ユーティリティ ---
 // 駅
 function createStation(track_1,track_2,delicacy,y,margin,a){
 
@@ -277,12 +435,13 @@ function placePlatformRoof(track_1,track_2,y,quantity) {
   const points_1 = RailMargin(getPointsEveryM(track_1, board_length_1), 0.7);
   const points_2 = RailMargin(getPointsEveryM(track_2, board_length_2), -0.7);
   
-  if (points_1.length != points_2.length){console.log('不均一')}
+  if (points_1.length != points_2.length){console.log('Err: 不均一')}
 
 
   // 1. テクスチャ読み込み
   const textureLoader = new THREE.TextureLoader();
   const texture = textureLoader.load('textures/roof.png');
+  texture.colorSpace = THREE.SRGBColorSpace;
 
   // 表示位置
   texture.repeat.set(0.2, 0.2);   // サイズを50%
@@ -301,7 +460,6 @@ function placePlatformRoof(track_1,track_2,y,quantity) {
 
   // 5. マテリアルに貼る
   const material = new THREE.MeshStandardMaterial({ map: texture });
-
 
   const diff_x = points_1[0].x - points_2[0].x
   const diff_z = points_1[0].z - points_2[0].z
@@ -323,8 +481,6 @@ function placePlatformRoof(track_1,track_2,y,quantity) {
       x: points_1[i+1].x - diff_x / 2,
       z: points_1[i+1].z - diff_z / 2
     }
-
-    
 
     // １番線
     const corner_1 = {
@@ -577,14 +733,6 @@ function placePlatformDoors(curve, offset = 1, interval = 25, side = 'left') {
   return track_doors
 }
 
-// ホームの屋根の生成
-// function placePlatformRoof(track1,track2, offset = 1, quantity = 25) {
-//   const board_length_1 = root.getLength(track1)/quantity;
-//   const board_length_2 = root.getLength(track2)/quantity;
-//   const points_1 = getPointsEveryM(track1, board_length_1);
-//   const points_2 = getPointsEveryM(track2, board_length_2);
-// }
-
 // 車両設定（テクスチャ対応版）
 function TrainSettings(
   length,
@@ -750,7 +898,6 @@ function runTrain(trainCars, root, track_doors, door_interval, max_speed=0.002, 
 
       } else {
         console.log("停車")
-        console.log('now : '+t+'stop : '+stop_point)
         train_stoped = true
         door_move_O = true
         door_move_C = true
@@ -1306,7 +1453,7 @@ if (true) {
   // 3. 柱（横方向ビーム）
   geometry = new THREE.BoxGeometry(0.05, 1, 10);
   material = new THREE.MeshStandardMaterial({...metalParams});
-  const count = 54;
+  const count = 49;
   const beam_pillar_2 = new THREE.InstancedMesh(geometry, material, count);
 
   // 4. 鉄骨梁（縦）
