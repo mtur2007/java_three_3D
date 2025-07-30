@@ -1696,6 +1696,21 @@ function animate() {
   // キーボード移動処理
   const strafe = (keys['a'] ? 1 : 0) - (keys['d'] ? 1 : 0);
   const forward = (keys['w'] ? 1 : 0) - (keys['s'] ? 1 : 0);
+  
+  document.addEventListener('keydown', (e) => {
+    const key = e.key.toLowerCase();
+  
+    // 数字キー押下で倍率設定
+    if (key >= '1' && key <= '9') {
+      baseSpeed = parseInt(key, 10) * (parseInt(key, 10) *0.005);
+    }
+    // 0キーで倍率リセット
+    else if (key === '0') {
+      baseSpeed = moveSpeed;
+    }
+  
+    keys[key] = true;
+  });
 
   // カメラ角度による方向ベクトル
   const camX = Math.sin(cameraAngleY);
