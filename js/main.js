@@ -281,37 +281,62 @@ updateObjectOnPath(test);
 // scene.add(glassMesh);
 
 const glass_material = new THREE.MeshStandardMaterial({
-  color: 0xccccff,         // 白ベース
+  // color: 0x003333,         // 白ベース
+  color: 0x004444,         // 白ベース
   transparent: true,       // 透明を有効に
-  opacity: 0.3,            // 透明度（0: 完全透明）
-  roughness: 0.05,         // 表面のザラザラ感（低いほどつるつる）
-  metalness: 0.5,          // 金属度（高いほど光沢が強く反射）
-  envMapIntensity: 1.0,    // 環境マップの反射強度（envMapを使うなら）
+  opacity: 0.05,            // 透明度（0: 完全透明）
+  roughness: -1,         // 表面のザラザラ感（低いほどつるつる）
+  metalness: 2,          // 金属度（高いほど光沢が強く反射）
+  envMapIntensity: 10.0,    // 環境マップの反射強度（envMapを使うなら）
   side: THREE.DoubleSide   // 両面描画（必要なら）
 });
 
-const elevatorY = 7.1
+const metal_material = new THREE.MeshStandardMaterial({
+  color: 0xffffff,         // 白ベース
+  metalness: 1,          // 完全な金属
+  roughness: 0.1,          // 少しザラつき（0.0だと鏡面すぎる）
+  envMapIntensity: 0.3,    // 環境マップの反射強度（あるとリアル）
+  side: THREE.DoubleSide   // 両面描画（必要なら）
+});
+
+const elevatorY = 7 -0.38 // .2
 const elevatorz = 36
 
-let glassGeometry = new THREE.BoxGeometry(1.2, 1, 0.05);
+let glassGeometry = new THREE.BoxGeometry(1.2, 1, 0.01);
 let glassMesh = new THREE.Mesh(glassGeometry, glass_material);
-glassMesh.position.set(2.7,elevatorY,elevatorz)
+glassMesh.position.set(2.7,elevatorY+0.6,elevatorz)
 scene.add(glassMesh);
 
-glassGeometry = new THREE.BoxGeometry(0.5, 1, 0.05);
+let metalGeometry = new THREE.BoxGeometry(1.2, 0.1, 0.02);
+let metalMesh = new THREE.Mesh(metalGeometry, metal_material);
+metalMesh.position.set(2.7,elevatorY+0.05,elevatorz)
+scene.add(metalMesh);
+
+glassGeometry = new THREE.BoxGeometry(0.5, 1, 0.01);
 glassMesh = new THREE.Mesh(glassGeometry, glass_material);
-glassMesh.position.set(2.3,elevatorY,elevatorz+1)
+glassMesh.position.set(2.3,elevatorY+0.6,elevatorz+1)
 scene.add(glassMesh);
 
-const glassGeometry3 = new THREE.BoxGeometry(0.05, 1, 1);
-const glassMesh3 = new THREE.Mesh(glassGeometry3, glass_material);
-glassMesh3.position.set(2.1,elevatorY,elevatorz+0.5)
-scene.add(glassMesh3);
-
-glassGeometry = new THREE.BoxGeometry(0.05, 1, 1);
+glassGeometry = new THREE.BoxGeometry(0.01, 1, 1.2);
 glassMesh = new THREE.Mesh(glassGeometry, glass_material);
-glassMesh.position.set(3.3,elevatorY,elevatorz+0.5)
+glassMesh.position.set(2.1,elevatorY+0.6,elevatorz+0.6)
 scene.add(glassMesh);
+
+metalGeometry = new THREE.BoxGeometry(0.02, 0.1, 1.2);
+metalMesh = new THREE.Mesh(metalGeometry, metal_material);
+metalMesh.position.set(2.1,elevatorY+0.05,elevatorz+0.6)
+scene.add(metalMesh);
+
+glassGeometry = new THREE.BoxGeometry(0.01, 1, 1.2);
+glassMesh = new THREE.Mesh(glassGeometry, glass_material);
+glassMesh.position.set(3.3,elevatorY+0.6,elevatorz+0.6)
+scene.add(glassMesh);
+
+metalGeometry = new THREE.BoxGeometry(0.02, 0.1, 1.2);
+metalMesh = new THREE.Mesh(metalGeometry, metal_material);
+metalMesh.position.set(3.3,elevatorY+0.05,elevatorz+0.6)
+scene.add(metalMesh);
+
 
 const pillar_material = new THREE.MeshStandardMaterial({
   color: 0x666666,         // 濃いグレー（鉄っぽい色）
@@ -326,7 +351,7 @@ let ceilingMesh = new THREE.Mesh(ceilingGeometry, pillar_material);
 ceilingMesh.position.set(3.3,elevatorY,elevatorz+1)
 scene.add(ceilingMesh);
 
-const door_material = new THREE.MeshStandardMaterial({
+const body_material = new THREE.MeshStandardMaterial({
   color: 0x888888,
   metalness: 0.8,
   roughness: 0.1,
@@ -334,39 +359,54 @@ const door_material = new THREE.MeshStandardMaterial({
   side: THREE.DoubleSide, // 念のため両面表示
 });
 
-// 光源（必須）
-// const test_light = new THREE.DirectionalLight(0xffffff, 1.2);
-// test_light.position.set(3, elevatorY, elevatorz);
-// scene.add(test_light);
-// scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-
-let doorGeometry = new THREE.BoxGeometry(0.2, 1, 0.01);
-let doorMesh = new THREE.Mesh(doorGeometry, door_material);
-doorMesh.position.set(3,elevatorY,elevatorz+1)
-
-
-// グループを作成
 const ElevatorDoorGroup_A1 = new THREE.Group();
 
-doorGeometry = new THREE.BoxGeometry(0.1, 0.3, 0.01);
-doorMesh = new THREE.Mesh(doorGeometry, door_material);
-doorMesh.position.set(3,elevatorY-0.35,elevatorz+1)
-ElevatorDoorGroup_A1.add(doorMesh);
+const doorGeometry1 = new THREE.BoxGeometry(0.1, 0.2, 0.01); // 0.3
+const doorGeometry2 = new THREE.BoxGeometry(0.1, 0.3, 0.01); // 0.2
+const doorGeometry3 = new THREE.BoxGeometry(0.05, 1, 0.01);
+const doorGeometry4 = new THREE.BoxGeometry(0.05, 1, 0.01);
 
-doorGeometry = new THREE.BoxGeometry(0.1, 0.2, 0.01);
-doorMesh = new THREE.Mesh(doorGeometry, door_material);
-doorMesh.position.set(3,elevatorY+0.4,elevatorz+1)
-ElevatorDoorGroup_A1.add(doorMesh);
+glassGeometry = new THREE.BoxGeometry(0.1, 0.5, 0.01);
+glassMesh = new THREE.Mesh(glassGeometry, glass_material);
+glassMesh.position.set(3,elevatorY+0.05+0.5,elevatorz+1.2)
+ElevatorDoorGroup_A1.add(glassMesh)
+// 表用マテリアル
+const doorFront = new THREE.MeshStandardMaterial({
+  color: 0x888888,
+  metalness: 0.8,
+  roughness: 0.1,
+  envMapIntensity: 1.0,
+  side: THREE.FrontSide
+});
 
-doorGeometry = new THREE.BoxGeometry(0.05, 1, 0.01);
-doorMesh = new THREE.Mesh(doorGeometry, door_material);
-doorMesh.position.set(3.075,elevatorY,elevatorz+1)
-ElevatorDoorGroup_A1.add(doorMesh);
+// 裏用マテリアル
+const doorBack = new THREE.MeshStandardMaterial({
+  color: 0xcccccc,
+  color: 0x999999,
+  metalness: 0.3,
+  roughness: 1,
+  envMapIntensity: 1.0,
+  side: THREE.FrontSide,
+});
 
-doorGeometry = new THREE.BoxGeometry(0.05, 1, 0.01);
-doorMesh = new THREE.Mesh(doorGeometry, door_material);
-doorMesh.position.set(2.925,elevatorY,elevatorz+1)
-ElevatorDoorGroup_A1.add(doorMesh);
+// ドアを生成してグループに追加（表裏2つのメッシュで構成）
+function createDualSidedDoor(geometry, position) {
+  const meshFront = new THREE.Mesh(geometry, doorFront);
+  const meshBack = new THREE.Mesh(geometry, doorBack);
+  meshFront.position.copy(position);
+  meshBack.position.copy(position);
+  meshBack.position.z -= 0.005;  // 0.001単位だけ奥にずらす（状況に応じて+-調整してください）
+  meshBack.scale.z = -0.009; // Z方向のスケールを変更して奥行きを変更
+
+  ElevatorDoorGroup_A1.add(meshFront);
+  ElevatorDoorGroup_A1.add(meshBack);
+}
+
+// ドアを作成
+createDualSidedDoor(doorGeometry1, new THREE.Vector3(3, elevatorY + 0.4 + 0.5, elevatorz + 1.2));
+createDualSidedDoor(doorGeometry2, new THREE.Vector3(3, elevatorY - 0.35 + 0.5, elevatorz + 1.2));
+createDualSidedDoor(doorGeometry3, new THREE.Vector3(3.075, elevatorY + 0.5, elevatorz + 1.2));
+createDualSidedDoor(doorGeometry4, new THREE.Vector3(2.925, elevatorY + 0.5, elevatorz + 1.2));
 
 const ElevatorDoorGroup_A2 = ElevatorDoorGroup_A1.clone(true); // true で子も含めてディープコピー
 const ElevatorDoorGroup_B1 = ElevatorDoorGroup_A1.clone(true); // true で子も含めてディープコピー
@@ -925,6 +965,14 @@ function placeTrainDoors(centerX, centerY, centerZ, angle, track_doors, totalLen
   const fence_point = spacing/2;
   const fenceLength = spacing - doorWidth;
 
+  const fence_material = new THREE.MeshStandardMaterial({
+    color: 0xdddddd,
+    metalness: 0.3,
+    roughness: 0.15,
+    envMapIntensity: 1.0,
+    side: THREE.DoubleSide, // 念のため両面表示 
+  });
+
   for (let i = 0; i < doorCount; i++) {
     const offset = (i - half) * spacing;      // -1.5, 1 -0.5, 1 +0.5, 1 +1.5（m）(ドアの横幅4mの場合)
     const x = centerX + dirX * offset;
@@ -932,13 +980,36 @@ function placeTrainDoors(centerX, centerY, centerZ, angle, track_doors, totalLen
     const y = centerY;
 
     // ドア(開閉部分)（横:可変長, 高さ0.37m, 厚さ0.03m）
-    const door_geometry = new THREE.BoxGeometry(0.03, 0.37, doorWidth/2);
-    const door_material = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
-    const door_0 = new THREE.Mesh(door_geometry, door_material);
-    const door_1 = new THREE.Mesh(door_geometry, door_material);
-    const over_space = 0.05
+    const door_0 = new THREE.Group();
+    
+    let door_center = 0.37/2
+    let leng_move_door = 0.05
+    
+    let door_object = new THREE.Mesh(new THREE.BoxGeometry(0.02, leng_move_door, doorWidth/2), fence_material)
+    door_object.position.set(0,door_center-leng_move_door*0.5,0)
+    door_0.add(door_object)
+
+    door_object = new THREE.Mesh(new THREE.BoxGeometry(0.02, leng_move_door, doorWidth/2), fence_material)
+    door_object.position.set(0,(-door_center)+leng_move_door*0.5,0)
+    door_0.add(door_object)
+    
+    const over_space = 0.045
     const half_fence = (fenceLength/2) + over_space
     const half_fence_diff = half_fence/2 - over_space
+    
+    const door_1 = door_0.clone(true);
+    
+    door_center = doorWidth/4
+    leng_move_door = 0.015
+  
+    door_object = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.37, leng_move_door), fence_material)
+    door_object.position.set(0,0,(-door_center)+leng_move_door*0.5)
+    door_0.add(door_object)
+
+    door_object = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.37, leng_move_door), fence_material)
+    door_object.position.set(0,0,door_center-leng_move_door*0.5)
+    door_1.add(door_object)
+
 
     // ドア:右
     door_0.position.set(x+dirX*doorWidth/4, y+0.005, z+dirZ*doorWidth/4);
@@ -950,13 +1021,6 @@ function placeTrainDoors(centerX, centerY, centerZ, angle, track_doors, totalLen
   
     track_doors.add(door_0);
     track_doors.add(door_1);
-    const fence_material = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      metalness: 0.7,
-      roughness: 0.2,
-      envMapIntensity: 1.0,
-      side: THREE.DoubleSide, // 念のため両面表示 
-    });
 
     // 柵(非開閉部分)（横:可変長, 高さ0.45m, 厚さ0.07m）
     if ( i === 0 ){
@@ -1043,8 +1107,8 @@ function TrainSettings(
     return texture;
   }
 
-  const metalness_num = 0.8
-  const roughness_num = 0.8
+  const metalness_num = 1
+  const roughness_num = 0.6
   const envMapIntensity_num = 1.0
   // 指定されたテクスチャセットをもとにマテリアル6面分を生成
   function createMaterials(set) {
@@ -1222,7 +1286,7 @@ function runTrain(trainCars, root, track_doors, door_interval, max_speed=0.002, 
 }
 
 // ホームドア開閉
-function moveDoorsFromGroup(group, mode, distance = 0.31, duration = 1500) {
+function moveDoorsFromGroup(group, mode, distance = 0.32, duration = 2000) {
 
   if (mode === 0) {
     mode = -1
@@ -1420,7 +1484,7 @@ const add_speed = 0.000001 // 追加速度(加速/減速)
 
 const Train_1 = TrainSettings(
   train_width,
-  0x888888,
+  0xaaaaaa,
   12,
   1,
   {
@@ -1440,7 +1504,7 @@ const Train_1 = TrainSettings(
 
 const Train_4 = TrainSettings(
   train_width,
-  0x888888,
+  0xaaaaaa,
   12,
   1,
   {
@@ -1464,7 +1528,7 @@ const reversedCurve_4 = new THREE.CatmullRomCurve3(
 
 const Train_2 = TrainSettings(
   train_width,
-  0x888888,
+  0xaaaaaa,
   10,
   1,
   {
@@ -1484,7 +1548,7 @@ const Train_2 = TrainSettings(
 
 const Train_3 = TrainSettings(
   train_width,
-  0x888888,
+  0xaaaaaa,
   10,
   1,
   {
@@ -1715,7 +1779,7 @@ if (true) {
 
   // 鉄のような金属マテリアル設定
   const metalParams = {
-    color: 0xffffff,      // 明るめのグレー（鉄色）
+    color: 0x999999,      // 明るめのグレー（鉄色）
     metalness: 0.3,       // 金属光沢最大
     roughness: 0.25,      // 少しザラザラ（低くするとツルツル）
     envMapIntensity: 1.0,    // 環境マップの反射強度（envMapを使うなら）
