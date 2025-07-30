@@ -299,45 +299,135 @@ const metal_material = new THREE.MeshStandardMaterial({
   side: THREE.DoubleSide   // 両面描画（必要なら）
 });
 
+let elevatorx = -2.7
 const elevatorY = 7 -0.38 // .2
 const elevatorz = 36
+const square_len = 0.9
+const thickness = 0.02
+const thickness_diff = square_len-thickness
 
-let glassGeometry = new THREE.BoxGeometry(1.2, 1, 0.01);
+let glassGeometry = new THREE.BoxGeometry(thickness_diff, 0.8, 0.01);
 let glassMesh = new THREE.Mesh(glassGeometry, glass_material);
-glassMesh.position.set(2.7,elevatorY+0.6,elevatorz)
+glassMesh.position.set(elevatorx,elevatorY+0.5,elevatorz)
 scene.add(glassMesh);
 
-let metalGeometry = new THREE.BoxGeometry(1.2, 0.1, 0.02);
+let metalGeometry = new THREE.BoxGeometry(thickness_diff, 0.1, 0.02);
 let metalMesh = new THREE.Mesh(metalGeometry, metal_material);
-metalMesh.position.set(2.7,elevatorY+0.05,elevatorz)
+metalMesh.position.set(elevatorx,elevatorY+0.05,elevatorz)
 scene.add(metalMesh);
 
-glassGeometry = new THREE.BoxGeometry(0.5, 1, 0.01);
+glassGeometry = new THREE.BoxGeometry(0.01, 0.8, thickness_diff);
 glassMesh = new THREE.Mesh(glassGeometry, glass_material);
-glassMesh.position.set(2.3,elevatorY+0.6,elevatorz+1)
+glassMesh.position.set(elevatorx+square_len/2,elevatorY+0.5,elevatorz+square_len/2)
 scene.add(glassMesh);
 
-glassGeometry = new THREE.BoxGeometry(0.01, 1, 1.2);
-glassMesh = new THREE.Mesh(glassGeometry, glass_material);
-glassMesh.position.set(2.1,elevatorY+0.6,elevatorz+0.6)
-scene.add(glassMesh);
-
-metalGeometry = new THREE.BoxGeometry(0.02, 0.1, 1.2);
+metalGeometry = new THREE.BoxGeometry(0.02, 0.1, thickness_diff);
 metalMesh = new THREE.Mesh(metalGeometry, metal_material);
-metalMesh.position.set(2.1,elevatorY+0.05,elevatorz+0.6)
+metalMesh.position.set(elevatorx+square_len/2,elevatorY+0.05,elevatorz+square_len/2)
 scene.add(metalMesh);
 
-glassGeometry = new THREE.BoxGeometry(0.01, 1, 1.2);
+glassGeometry = new THREE.BoxGeometry(0.01, 0.8, thickness_diff);
 glassMesh = new THREE.Mesh(glassGeometry, glass_material);
-glassMesh.position.set(3.3,elevatorY+0.6,elevatorz+0.6)
+glassMesh.position.set(elevatorx-square_len/2,elevatorY+0.5,elevatorz+square_len/2)
 scene.add(glassMesh);
 
-metalGeometry = new THREE.BoxGeometry(0.02, 0.1, 1.2);
+metalGeometry = new THREE.BoxGeometry(0.02, 0.1, thickness_diff);
 metalMesh = new THREE.Mesh(metalGeometry, metal_material);
-metalMesh.position.set(3.3,elevatorY+0.05,elevatorz+0.6)
+metalMesh.position.set(elevatorx-square_len/2,elevatorY+0.05,elevatorz+square_len/2)
 scene.add(metalMesh);
 
+glassGeometry = new THREE.BoxGeometry(thickness_diff/9, 0.8, 0.01);
+glassMesh = new THREE.Mesh(glassGeometry, glass_material);
+glassMesh.position.set(elevatorx+square_len/2-thickness_diff/18-thickness/2,elevatorY+0.5,elevatorz+square_len)
+scene.add(glassMesh);
 
+const geom3 = new THREE.BoxGeometry(thickness_diff/9, 0.1, thickness);
+glassMesh = new THREE.Mesh(geom3, new THREE.MeshStandardMaterial(metal_material));
+glassMesh.position.set(elevatorx+square_len/2-thickness_diff/18-thickness/2,elevatorY+0.05,elevatorz+square_len);
+scene.add(glassMesh);
+
+glassGeometry = new THREE.BoxGeometry(thickness_diff/9, 0.8, 0.01);
+glassMesh = new THREE.Mesh(glassGeometry, glass_material);
+glassMesh.position.set(elevatorx-square_len/2+thickness_diff/18+thickness/2,elevatorY+0.5,elevatorz+square_len)
+scene.add(glassMesh);
+
+glassMesh = new THREE.Mesh(geom3, new THREE.MeshStandardMaterial(metal_material));
+glassMesh.position.set(elevatorx-square_len/2+thickness_diff/18+thickness/2,elevatorY+0.05,elevatorz+square_len);
+scene.add(glassMesh);
+
+glassGeometry = new THREE.BoxGeometry(0.195, 0.8, 0.01);
+glassMesh = new THREE.Mesh(glassGeometry,  new THREE.MeshStandardMaterial({color: 0xFFFFFF}));
+glassMesh.position.set(elevatorx-square_len/2+thickness_diff/18+thickness/2+0.0975+thickness_diff/18,elevatorY+0.5,elevatorz+square_len)
+scene.add(glassMesh);
+
+const geom4 = new THREE.BoxGeometry(0.195, 0.1, thickness);
+glassMesh = new THREE.Mesh(geom4, new THREE.MeshStandardMaterial(metal_material));
+glassMesh.position.set(elevatorx-square_len/2+thickness_diff/18+thickness/2+0.0975+thickness_diff/18,elevatorY+0.05,elevatorz+square_len)
+scene.add(glassMesh);
+
+
+// 横棒
+const geom1 = new THREE.BoxGeometry(thickness, 0.9, 0.001);
+let mesh = new THREE.Mesh(geom1, new THREE.MeshStandardMaterial(metal_material));
+mesh.position.set(elevatorx+square_len/2,elevatorY+0.45,elevatorz+thickness/2);
+scene.add(mesh);
+// 縦棒
+const geom2 = new THREE.BoxGeometry(0.001, 0.9, thickness);
+mesh = new THREE.Mesh(geom2, new THREE.MeshStandardMaterial(metal_material));
+mesh.position.set(elevatorx+square_len/2-thickness/2,elevatorY+0.45,elevatorz);
+scene.add(mesh);
+
+mesh = new THREE.Mesh(geom1, new THREE.MeshStandardMaterial(metal_material));
+mesh.position.set(elevatorx-square_len/2,elevatorY+0.45,elevatorz+thickness/2);
+scene.add(mesh);
+
+mesh = new THREE.Mesh(geom2, new THREE.MeshStandardMaterial(metal_material));
+mesh.position.set(elevatorx-square_len/2+thickness/2,elevatorY+0.45,elevatorz);
+scene.add(mesh);
+
+mesh = new THREE.Mesh(geom1, new THREE.MeshStandardMaterial(metal_material));
+mesh.position.set(elevatorx-square_len/2,elevatorY+0.45,elevatorz+square_len-thickness/2);
+scene.add(mesh);
+
+mesh = new THREE.Mesh(geom2, new THREE.MeshStandardMaterial(metal_material));
+mesh.position.set(elevatorx-square_len/2+thickness/2,elevatorY+0.45,elevatorz+square_len);
+scene.add(mesh);
+
+mesh = new THREE.Mesh(geom1, new THREE.MeshStandardMaterial(metal_material));
+mesh.position.set(elevatorx+square_len/2,elevatorY+0.45,elevatorz+square_len-thickness/2);
+scene.add(mesh);
+
+mesh = new THREE.Mesh(geom2, new THREE.MeshStandardMaterial(metal_material));
+mesh.position.set(elevatorx+square_len/2-thickness/2,elevatorY+0.45,elevatorz+square_len);
+scene.add(mesh);
+
+
+// elevatorx = 2.5
+const gate1 = new THREE.BoxGeometry(0.08, 0.8, 0.23);
+mesh = new THREE.Mesh(gate1, new THREE.MeshStandardMaterial(metal_material));
+mesh.position.set((elevatorx+square_len/2-thickness_diff/18-thickness/2)-thickness_diff/18-0.04,elevatorY+0.4,elevatorz+square_len-0.1);
+scene.add(mesh);
+mesh = new THREE.Mesh(gate1, new THREE.MeshStandardMaterial(metal_material));
+mesh.position.set((elevatorx+square_len/2-thickness_diff/18-thickness/2)-thickness_diff/18-0.45,elevatorY+0.4,elevatorz+square_len-0.1);
+scene.add(mesh);
+
+const gate2 = new THREE.BoxGeometry(0.49, 0.15, 0.23);
+mesh = new THREE.Mesh(gate2, new THREE.MeshStandardMaterial(metal_material));
+mesh.position.set(-2.6025,elevatorY+0.825,elevatorz+square_len-0.1);
+scene.add(mesh);
+
+const box = new THREE.BoxGeometry(1, 0.2, 1);
+mesh = new THREE.Mesh(box, new THREE.MeshStandardMaterial({color: 0x222222}));
+mesh.position.set(elevatorx,elevatorY+1,elevatorz+square_len/2);
+scene.add(mesh);
+
+const box2 = new THREE.BoxGeometry(1, 2, 1);
+mesh = new THREE.Mesh(box2, new THREE.MeshStandardMaterial({color: 0xffffff}));
+mesh.position.set(elevatorx,elevatorY+2.1,elevatorz+square_len/2);
+scene.add(mesh);
+
+elevatorx = -2.58
+// 2.82
 const pillar_material = new THREE.MeshStandardMaterial({
   color: 0x666666,         // 濃いグレー（鉄っぽい色）
   metalness: 0.5,          // 完全な金属
@@ -349,7 +439,7 @@ const pillar_material = new THREE.MeshStandardMaterial({
 let ceilingGeometry = new THREE.BoxGeometry(0.1, 3, 0.1);
 let ceilingMesh = new THREE.Mesh(ceilingGeometry, pillar_material);
 ceilingMesh.position.set(3.3,elevatorY,elevatorz+1)
-scene.add(ceilingMesh);
+// scene.add(ceilingMesh);
 
 const body_material = new THREE.MeshStandardMaterial({
   color: 0x888888,
@@ -358,18 +448,22 @@ const body_material = new THREE.MeshStandardMaterial({
   envMapIntensity: 1.0,
   side: THREE.DoubleSide, // 念のため両面表示
 });
-
 const ElevatorDoorGroup_A1 = new THREE.Group();
 
-const doorGeometry1 = new THREE.BoxGeometry(0.1, 0.2, 0.01); // 0.3
-const doorGeometry2 = new THREE.BoxGeometry(0.1, 0.3, 0.01); // 0.2
-const doorGeometry3 = new THREE.BoxGeometry(0.05, 1, 0.01);
-const doorGeometry4 = new THREE.BoxGeometry(0.05, 1, 0.01);
-
-glassGeometry = new THREE.BoxGeometry(0.1, 0.5, 0.01);
+const doorGeometry1 = new THREE.BoxGeometry(0.045, 0.8, 0.01);
+const doorGeometry2 = new THREE.BoxGeometry(0.085, 0.2, 0.01); // 0.3
+const doorGeometry3 = new THREE.BoxGeometry(0.085, 0.25, 0.01); // 0.2
+const doorGeometry4 = new THREE.BoxGeometry(0.045, 0.8, 0.01);
+// 0.175 
+// 45 85 45 
+// 15 40 80 40
+// 15 80 80
+// 15 160
+glassGeometry = new THREE.BoxGeometry(0.085, 0.35, 0.01);
 glassMesh = new THREE.Mesh(glassGeometry, glass_material);
-glassMesh.position.set(3,elevatorY+0.05+0.5,elevatorz+1.2)
+glassMesh.position.set(elevatorx+0.065,elevatorY+0.425,elevatorz+square_len*0.75)
 ElevatorDoorGroup_A1.add(glassMesh)
+
 // 表用マテリアル
 const doorFront = new THREE.MeshStandardMaterial({
   color: 0x888888,
@@ -403,10 +497,10 @@ function createDualSidedDoor(geometry, position) {
 }
 
 // ドアを作成
-createDualSidedDoor(doorGeometry1, new THREE.Vector3(3, elevatorY + 0.4 + 0.5, elevatorz + 1.2));
-createDualSidedDoor(doorGeometry2, new THREE.Vector3(3, elevatorY - 0.35 + 0.5, elevatorz + 1.2));
-createDualSidedDoor(doorGeometry3, new THREE.Vector3(3.075, elevatorY + 0.5, elevatorz + 1.2));
-createDualSidedDoor(doorGeometry4, new THREE.Vector3(2.925, elevatorY + 0.5, elevatorz + 1.2));
+createDualSidedDoor(doorGeometry1, new THREE.Vector3(elevatorx, elevatorY + 0.4, elevatorz + square_len*0.75));
+createDualSidedDoor(doorGeometry2, new THREE.Vector3(elevatorx+0.065, elevatorY  + 0.7, elevatorz + square_len*0.75));
+createDualSidedDoor(doorGeometry3, new THREE.Vector3(elevatorx+0.065, elevatorY + 0.125, elevatorz + square_len*0.75));
+createDualSidedDoor(doorGeometry4, new THREE.Vector3(elevatorx+0.065+0.065, elevatorY + 0.4, elevatorz + square_len*0.75));
 
 const ElevatorDoorGroup_A2 = ElevatorDoorGroup_A1.clone(true); // true で子も含めてディープコピー
 const ElevatorDoorGroup_B1 = ElevatorDoorGroup_A1.clone(true); // true で子も含めてディープコピー
@@ -415,13 +509,13 @@ const ElevatorDoorGroup_C1 = ElevatorDoorGroup_A1.clone(true); // true で子も
 const ElevatorDoorGroup_C2 = ElevatorDoorGroup_A1.clone(true); // true で子も含めてディープコピー
 
 ElevatorDoorGroup_A1.position.set(0, 0, 0);
-ElevatorDoorGroup_A2.position.set(-0.2, 0, 0.02);
+ElevatorDoorGroup_A2.position.set(-0.175, 0, 0.02);
 
 ElevatorDoorGroup_B1.position.set(0, 3.5, 0);
-ElevatorDoorGroup_B2.position.set(-0.2, 3.5, 0.02);
+ElevatorDoorGroup_B2.position.set(-0.175, 3.5, 0.02);
 
 ElevatorDoorGroup_C1.position.set(0, 0, -0.05);
-ElevatorDoorGroup_C2.position.set(-0.2, 0, -0.03);
+ElevatorDoorGroup_C2.position.set(-0.175, 0, -0.03);
 
 // グループをシーンに追加
 scene.add(ElevatorDoorGroup_A1);
@@ -445,7 +539,7 @@ async function elevator_door_open(
   ElevatorDoorGroup_4
 ) {
   const range_num = 100;
-  const xOffset = 0.2 / range_num;
+  const xOffset = 0.175 / range_num;
 
   // ドアを開ける（徐々に）
   for (let i = 0; i <= range_num; i++) {
@@ -532,42 +626,42 @@ async function startLoop() {
       ElevatorDoorGroup_C1,
       ElevatorDoorGroup_C2
     );
-    await sleep(3000); // 3秒待ってからまた開ける
+    await sleep(7000); // 3秒待ってからまた開ける
 
-    // Cドアを y+方向へスライド（内側ドアを上に移動して2階へ）
-    const F2_y = 3.5
-    const range_num = 1800
-    const yOffset = F2_y/range_num
-    const steps = 30
+    // // Cドアを y+方向へスライド（内側ドアを上に移動して2階へ）
+    // const F2_y = 3.5
+    // const range_num = 1800
+    // const yOffset = F2_y/range_num
+    // const steps = 30
     
-    for (let i = 0; i < range_num; i++) {
-      ElevatorDoorGroup_C1.position.y += yOffset;
-      ElevatorDoorGroup_C2.position.y += yOffset;
+    // for (let i = 0; i < range_num; i++) {
+    //   ElevatorDoorGroup_C1.position.y += yOffset;
+    //   ElevatorDoorGroup_C2.position.y += yOffset;
     
-      const sleepTime = getSleepTime(i, range_num, steps);
-      await sleep(sleepTime);
-    }
+    //   const sleepTime = getSleepTime(i, range_num, steps);
+    //   await sleep(sleepTime);
+    // }
 
-    await sleep(3000); // 3秒待ってからまた開ける
+    // await sleep(3000); // 3秒待ってからまた開ける
 
-    await elevator_door_open(
-      ElevatorDoorGroup_B1,
-      ElevatorDoorGroup_B2,
-      ElevatorDoorGroup_C1,
-      ElevatorDoorGroup_C2
-    );
-    await sleep(3000); // 3秒待ってからまた開ける
+    // await elevator_door_open(
+    //   ElevatorDoorGroup_B1,
+    //   ElevatorDoorGroup_B2,
+    //   ElevatorDoorGroup_C1,
+    //   ElevatorDoorGroup_C2
+    // );
+    // await sleep(3000); // 3秒待ってからまた開ける
 
 
-    for (let i = 0; i < range_num; i++) {
-      ElevatorDoorGroup_C1.position.y -= yOffset;
-      ElevatorDoorGroup_C2.position.y -= yOffset;
+    // for (let i = 0; i < range_num; i++) {
+    //   ElevatorDoorGroup_C1.position.y -= yOffset;
+    //   ElevatorDoorGroup_C2.position.y -= yOffset;
     
-      const sleepTime = getSleepTime(i, range_num, steps);
-      await sleep(sleepTime);
-    }
+    //   const sleepTime = getSleepTime(i, range_num, steps);
+    //   await sleep(sleepTime);
+    // }
 
-    await sleep(3000); // 3秒待ってからまた開ける
+    // await sleep(3000); // 3秒待ってからまた開ける
   }
 }
 
@@ -1437,11 +1531,11 @@ const track3 = sliceCurvePoints(line_3, start, end);
 const track4 = sliceCurvePoints(line_4, start, end+0.04);
 
 
-createTrack(line_1, 0xff0000)
-createTrack(line_2, 0x772200)
+// createTrack(line_1, 0xff0000)
+// createTrack(line_2, 0x772200)
 
-createTrack(line_3, 0x002277)
-createTrack(line_4, 0x0000ff)
+// createTrack(line_3, 0x002277)
+// createTrack(line_4, 0x0000ff)
 
 // 高架(柱/床版)を生成
 const interval = 1
