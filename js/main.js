@@ -1255,6 +1255,73 @@ function placePlatformDoors(curve, offset = 1, interval = 25, side = 'left') {
   return track_doors
 }
 
+// パンタフラフ ¯¯"<"¯¯
+function createPantograph(Arm_rotation_z) {
+  const pantograph = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial(metal_material);
+
+  const Arm_len = 0.45
+  const Arm_X_len = Math.sin(Arm_rotation_z)*Arm_len*0.5
+  const Arm_Y_len = Math.cos(Arm_rotation_z)*Arm_len
+  // 下アーム
+  const lowerArm = new THREE.Mesh(new THREE.BoxGeometry(0.02, Arm_len, 0.02), mat);
+  lowerArm.rotation.z = Arm_rotation_z;
+  lowerArm.position.set(0, Arm_Y_len*0.5, 0);
+  pantograph.add(lowerArm);
+
+  const lowerArm2 = new THREE.Mesh(new THREE.BoxGeometry(0.004, Arm_len-0.1, 0.004), mat);
+  lowerArm2.rotation.z = Arm_rotation_z-0.065;
+  lowerArm2.position.set(-0.07,(Math.cos(Arm_rotation_z-0.065)*(Arm_len-0.1)*0.5), 0);
+  pantograph.add(lowerArm2);
+
+  // 上アーム（斜め）
+  const upperArm = new THREE.Mesh(new THREE.BoxGeometry(0.02, Arm_len, 0.02), mat);
+  upperArm.rotation.z = -Arm_rotation_z;
+  upperArm.position.set(0, Arm_Y_len*1.5, 0);
+  pantograph.add(upperArm.clone());
+
+  const upperArm2 = new THREE.Mesh(new THREE.BoxGeometry(0.004, Arm_len-0.02, 0.004), mat);
+  upperArm2.rotation.z = -(Arm_rotation_z-0.065);
+  upperArm2.rotation.y = 0.27;
+  upperArm2.position.set(+0.03, Arm_Y_len*1.5-0.02, -0.045);
+  pantograph.add(upperArm2.clone());
+
+  const upperArm3 = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.05, 0.02), mat);
+  upperArm3.rotation.z = -(Arm_rotation_z-0.35);
+  upperArm3.position.set(-0.19, Arm_Y_len-0.015, 0);
+  pantograph.add(upperArm3.clone());
+
+
+  pantograph.rotation.y = Math.PI / 2;
+  // 接触板
+  const contactGroup = new THREE.Group();
+  const contact = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.01, 0.5), new THREE.MeshStandardMaterial(metal_material));
+  contact.position.set(Arm_X_len-0.02, Arm_Y_len*2,0);
+  contactGroup.add(contact.clone());
+  contact.position.set(Arm_X_len+0.02, Arm_Y_len*2,0);
+  contactGroup.add(contact.clone());
+
+  const contact_rotation_x = Math.PI / 3
+  const contact_Y_len = Math.sin(contact_rotation_x)*0.1*0.5
+  const contact_X_len = Math.cos(contact_rotation_x)*0.1*0.5
+
+  const contact2 = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.015, 0.1), new THREE.MeshStandardMaterial(metal_material));
+  contact2.rotation.x = contact_rotation_x
+  contact2.position.set(Arm_X_len, Arm_Y_len*2-contact_Y_len, 0.25+contact_X_len);
+  contactGroup.add(contact2.clone());
+
+  contact2.rotation.x = -contact_rotation_x
+  contact2.position.x = Arm_X_len
+  contact2.position.z = -(0.25+contact_X_len);
+  contactGroup.add(contact2.clone());
+
+  contactGroup.position.x = -0.05
+  pantograph.add(contactGroup.clone())
+  contactGroup.position.x = 0.05
+  pantograph.add(contactGroup.clone())
+  return pantograph;
+}
+
 // 車両設定（テクスチャ対応版）
 function TrainSettings(
   length,
@@ -1334,9 +1401,20 @@ function TrainSettings(
       textureSet = textureMiddle;
     }
     
-
     const materials = createMaterials(textureSet);
     const car = new THREE.Mesh(geo, materials.map(m => m.clone()));
+    
+    // ▼ パンタグラフを特定車両に追加（ここでは1両目以外の中間車に例として設置）
+    if (i % 3 === 1) {
+      const pantograph = createPantograph(Math.PI / 2.7);
+      pantograph.position.set(0, 0.5, 2.8);  // 車両上面中央に配置（必要ならZ方向調整）
+      car.add(pantograph);
+
+      const pantograph2 = createPantograph(Math.PI / -2.1);
+      pantograph2.position.set(0, 0.5, -2.8);  // 車両上面中央に配置（必要ならZ方向調整）
+      car.add(pantograph2);
+    }
+
     trainCars.push(car);
     scene.add(car);
   }
