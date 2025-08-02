@@ -89,8 +89,13 @@ function getPointByDistanceRatio(curvePoints, ratio) {
 
 // 線路表示
 function createTrack(curve, color = 0x333333) {
-  const geom = new THREE.BufferGeometry().setFromPoints(curve.getPoints(100));
-  const mat = new THREE.LineBasicMaterial({ color });
+  const points = curve.getPoints(100);
+  // すべての点にY座標を追加 or 修正（例：Y=1.5）
+  for (let i = 0; i < points.length; i++) {
+    points[i].y += 0.865;
+  }
+  const geom = new THREE.BufferGeometry().setFromPoints(points);
+  const mat = new THREE.LineBasicMaterial({ color: 0x000000 });
   const line = new THREE.Line(geom, mat);
   scene.add(line);
 }
@@ -1685,11 +1690,11 @@ const track3 = sliceCurvePoints(line_3, start, end);
 const track4 = sliceCurvePoints(line_4, start, end+0.04);
 
 
-// createTrack(line_1, 0xff0000)
-// createTrack(line_2, 0x772200)
+createTrack(line_1, 0xff0000)
+createTrack(line_2, 0x772200)
 
-// createTrack(line_3, 0x002277)
-// createTrack(line_4, 0x0000ff)
+createTrack(line_3, 0x002277)
+createTrack(line_4, 0x0000ff)
 
 // 高架(柱/床版)を生成
 const interval = 1
