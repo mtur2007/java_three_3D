@@ -155,8 +155,7 @@ function updateObjectOnPath(path, time=0, speed=0.0005) {
 
   function moveObject(){
     for (let i =0; i < steps_num; i++){
-      const pos = Equal_path[Math.floor(leng*((time+i*depth_idx)%step_diff))]; // 位置だけ取得
-      steps[i].position.copy(pos);
+      steps[i].position.copy(Equal_path[Math.floor(leng*((time+i*depth_idx)%step_diff))]);
     }
     if (time >= step_diff){time = 0}else{time+=speed};
     requestAnimationFrame(moveObject);
@@ -1393,6 +1392,8 @@ function TrainSettings(
     ];
   }
 
+
+  const trainGroup = new THREE.Group(); // これをまとめる親
   const trainCars = [];
 
   for (let i = 0; i < cars; i++) {
@@ -1405,33 +1406,83 @@ function TrainSettings(
     } else {
       textureSet = textureMiddle;
     }
-    
+
     const materials = createMaterials(textureSet);
     const car = new THREE.Mesh(geo, materials.map(m => m.clone()));
-    
-    // ▼ パンタグラフを特定車両に追加（ここでは1両目以外の中間車に例として設置）
+
+    // ▼ 車両の位置を z 方向にずらす（中央起点）
+    const spacing = 6.95; // 車両の長さと同じだけ間隔を空ける
+    car.position.z = - i * spacing;
+
+    // ▼ パンタグラフ設置（例: 1, 4, 7 両目など）
     if (i % 3 === 1) {
       const pantograph = createPantograph(Math.PI / 2.7);
-      pantograph.position.set(0, 0.5, 2.8);  // 車両上面中央に配置（必要ならZ方向調整）
+      pantograph.position.set(0, 0.5, 2.8);
       car.add(pantograph);
 
       const pantograph2 = createPantograph(Math.PI / -2.1);
-      pantograph2.position.set(0, 0.5, -2.8);  // 車両上面中央に配置（必要ならZ方向調整）
+      pantograph2.position.set(0, 0.5, -2.8);
       car.add(pantograph2);
     }
 
     trainCars.push(car);
-    scene.add(car);
+    trainGroup.add(car); // グループに追加
   }
 
-  return trainCars;
+  trainGroup.userData.cars = trainCars; // 必要ならアクセスしやすく保存
+  trainGroup.visible = false;   // 再表示する
+  
+  scene.add(trainGroup); // シーンに一括追加
+
+  return trainGroup;
+  
 }
 
 
 // --- アニメーション ---
+// ホームドア開閉
+// ホームドア開閉
+function moveDoorsFromGroup(group, mode, distance = 0.32, duration = 2000) {
+  return new Promise(resolve => {
+
+    if (mode === 0) {
+      mode = -1;
+    }
+
+    const children = group.children;
+    const startPositions = children.map(child => child.position.clone());
+    const startTime = performance.now();
+
+    function animate(time) {
+      const t = Math.min((time - startTime) / duration, 1);
+
+      children.forEach((child, index) => {
+        let angle = child.rotation.y;
+        let dirX = Math.sin(angle);
+        let dirZ = Math.cos(angle);
+        const sign = index % 2 === 0 ? 1 * mode : -1 * mode;
+        const start = startPositions[index];
+        child.position.set(
+          start.x + dirX * distance * sign * t,
+          start.y,
+          start.z + dirZ * distance * sign * t
+        );
+      });
+
+      if (t < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        resolve();  // アニメーション終了を通知
+      }
+    }
+
+    requestAnimationFrame(animate);  // アニメーション開始
+  });
+}
+
 
 // 列車の運行
-function runTrain(trainCars, root, track_doors, door_interval, max_speed=0.002, add_speed=0.000005, stop_point=0.5, t=0) {
+async function runTrain(trainCars, root, track_doors, door_interval, max_speed=0.002, add_speed=0.000005, stop_point=0.5, t=0) {
 
   const Equal_root = getPointsEveryM(root, 0.01); // spacing=0.1mごと（細かすぎたら25に）
   const totalPoints = Equal_root.length;
@@ -1443,7 +1494,7 @@ function runTrain(trainCars, root, track_doors, door_interval, max_speed=0.002, 
 
   const carSpacing = door_interval / length
   
-  const maxOffsetT = carSpacing * (trainCars.length + 1);
+  const maxOffsetT = carSpacing * (trainCars.userData.cars.length + 1);
 
   let speed = max_speed
   let stop_point_diff = 0
@@ -1457,120 +1508,86 @@ function runTrain(trainCars, root, track_doors, door_interval, max_speed=0.002, 
   speed = max_speed
   
   test = getPointByDistanceRatio(Equal_root, brake_point);
- 
-  let door_move_O = false
-  let door_move_C = false
-  let cool_time = 0.1
-
   let train_stoped = false
-  
-  const value = getRandomFloat(0.1, 1); // 1.5以上5.5未満の小数
-  cool_time = value
 
-  function runCar() {
+  trainCars.visible = true;   // 再表示する
+  console.log(trainCars)
+
+  let offsetT = NaN;
+  let safeIndex = NaN
+
+  let Pos = NaN
+  let Tan = NaN
+  let car = NaN // ← ここだけ変わる
+
+  // ランダムな秒数（1000〜5000ミリ秒）
+  await sleep( 1000 + Math.random() * 20000);
+  
+  async function runCar() {
     if (t >= 1 + maxOffsetT) {
-      t = 0
-      const value = getRandomFloat(0.1, 1); // 1.5以上5.5未満の小数
-      cool_time = value
-      train_stoped = false
       speed = max_speed
+      train_stoped = false
+      t = 0
+
+      // ランダムな秒数（1000〜5000ミリ秒）
+      await sleep( 1000 + Math.random() * 20000);
+      // return NaN
       
     }
-    
-    if (cool_time < 0){
-      if (speed >= 0){ 
-        for (let i = 0; i < trainCars.length; i++) {
-          const offsetT = t - carSpacing * i;
-    
-          // offsetT が負ならその車両はまだ線路に出ない
-          if (offsetT < 0) continue;
-    
-          const index = Math.floor(offsetT * totalPoints);
-          const safeIndex = Math.min(index, totalPoints - 2); // 最後の点を超えないように
-    
-          const Pos = Equal_root[safeIndex];
-          const nextIndex = safeIndex + 1;
-          const Tan = Equal_root[nextIndex].clone().sub(Pos).normalize();
-    
-          trainCars[i].position.copy(Pos);
-          trainCars[i].lookAt(Pos.clone().add(Tan));
-        }
+  
+    if (speed >= 0){ 
+      for (let i = 0; i < trainCars.userData.cars.length; i++) {
 
-        if (train_stoped === false && t > brake_point){
-          speed -= add_speed;
+        // const offsetT = t - carSpacing * i;
+        offsetT = t - carSpacing * i;
+    
+        // offsetT が負ならその車両はまだ線路に出ない
+        if (offsetT < 0 | offsetT > 1) {
+          trainCars.userData.cars[i].visible = false;
+          continue;
         } else {
-          speed += add_speed
-          if (speed >= max_speed){speed = max_speed}
-        }
-        
-        t += speed;
-
-      } else {
-        console.log("停車")
-        train_stoped = true
-        door_move_O = true
-        door_move_C = true
-        cool_time = 1
-        speed = 0
+          trainCars.userData.cars[i].visible = true;
+        };
+      
+        safeIndex = Math.min(Math.floor(offsetT * totalPoints), totalPoints - 2);
+      
+        Pos = Equal_root[safeIndex];
+        Tan = Equal_root[safeIndex+1].clone().sub(Pos).normalize();
+      
+        car = trainCars.userData.cars[i]; // ← ここだけ変わる
+        car.position.copy(Pos);
+        car.lookAt(Pos.clone().add(Tan));
+      
       }
+
+      if (train_stoped === false && t > brake_point){
+        speed -= add_speed;
+      } else {
+        speed += add_speed
+        if (speed >= max_speed){speed = max_speed}
+      }
+      
+      t += speed;
 
     } else {
 
-      cool_time -= 0.001
-    
-      if ((cool_time < 0.88) && door_move_O){
-        console.log("< > door_open");
-        door_move_O = false
-        moveDoorsFromGroup(track_doors,1)
-      } else if ((cool_time < 0.3) && door_move_C){
-        console.log("> < door_close");
-        door_move_C = false
-        moveDoorsFromGroup(track_doors,0)
-      }
+      train_stoped = true
+      speed = 0
 
-      if (cool_time < 0){
-        console.log("発車")
-      }
+      await sleep(3000); // 3秒待ってからまた開ける
+      await moveDoorsFromGroup(track_doors,1);
+
+      await sleep(7000); // 3秒待ってからまた開ける
+      await moveDoorsFromGroup(track_doors,0)
+
+      await sleep(3000); // 3秒待ってからまた開ける
+
     }
+
     requestAnimationFrame(runCar);
   }
+
   runCar();
-
-}
-
-// ホームドア開閉
-function moveDoorsFromGroup(group, mode, distance = 0.32, duration = 2000) {
-
-  if (mode === 0) {
-    mode = -1
-  }
-
-  const children = group.children;
-  const startPositions = children.map(child => child.position.clone());
-  const startTime = performance.now();
-
-  function animate(time) {
-    const t = Math.min((time - startTime) / duration, 1);
-
-    children.forEach((child, index) => {
-
-      let angle = child.rotation.y;
-      let dirX = Math.sin(angle);
-      let dirZ = Math.cos(angle);
-    
-      const sign = index % 2 === 0 ? 1*mode : -1*mode;
-      const start = startPositions[index];
-      child.position.set(
-        start.x + dirX * distance * sign * t,
-        start.y,
-        start.z + dirZ * distance * sign * t
-      );
-    });
-
-    if (t < 1) requestAnimationFrame(animate);
-  }
-
-  requestAnimationFrame(animate);
 }
 
 // --- リサイズ対応 ---
@@ -1735,23 +1752,68 @@ const track4_doors = placePlatformDoors(track4, 0.9, door_interval, 'right');  /
 const max_speed = 0.0005 // 制限速度(最高)
 const add_speed = 0.000001 // 追加速度(加速/減速)
 
+const exhibition_tyuou = TrainSettings(
+  train_width,
+  0xaaaaaa,
+  12,
+  1,
+  {
+    side_right: 'textures/tyuou_end_rightside.png',
+    side_left: 'textures/tyuou_end_leftside.png',
+    front:  'textures/tyuou_front.png',
+  },
+  {
+    side: 'textures/tyuou_middle_side.png',
+  },
+  { 
+    side_right: 'textures/tyuou_end_leftside.png',
+    side_left: 'textures/tyuou_end_rightside.png',
+    back:  'textures/tyuou_front.png',
+  }
+);
+
+const exhibition_soubu = TrainSettings(
+  train_width,
+  0xaaaaaa,
+  10,
+  1,
+  {
+    side_right: 'textures/soubu_end_rightside.png',
+    side_left: 'textures/soubu_end_leftside.png',
+    front:  'textures/soubu_front.png',
+  },
+  {
+    side: 'textures/soubu_middle_side.png',
+  },
+  {
+    side_right: 'textures/soubu_end_leftside.png',
+    side_left: 'textures/soubu_end_rightside.png',
+    back:  'textures/soubu_front.png',
+  }
+);
+
+exhibition_tyuou.position.set(11,0.8,15)
+exhibition_tyuou.visible = true;   // 再表示する
+exhibition_soubu.position.set(13,0.8,15)
+exhibition_soubu.visible = true;   // 再表示する
+
 const Train_1 = TrainSettings(
   train_width,
   0xaaaaaa,
   12,
   1,
   {
-    side_right: 'textures/tyuou_1.png',
-    side_left: 'textures/tyuou_3.png',
-    front:  'textures/tyuou_2.png',
+    side_right: 'textures/tyuou_end_rightside.png',
+    side_left: 'textures/tyuou_end_leftside.png',
+    front:  'textures/tyuou_front.png',
   },
   {
-    side: 'textures/tyuou.png',
+    side: 'textures/tyuou_middle_side.png',
   },
   { 
-    side_right: 'textures/tyuou_3.png',
-    side_left: 'textures/tyuou_1.png',
-    back:  'textures/tyuou_2.png',
+    side_right: 'textures/tyuou_end_leftside.png',
+    side_left: 'textures/tyuou_end_rightside.png',
+    back:  'textures/tyuou_front.png',
   }
 );
 
@@ -1761,17 +1823,17 @@ const Train_4 = TrainSettings(
   12,
   1,
   {
-    side_right: 'textures/tyuou_1.png',
-    side_left: 'textures/tyuou_3.png',
-    front:  'textures/tyuou_2.png',
+    side_right: 'textures/tyuou_end_rightside.png',
+    side_left: 'textures/tyuou_end_leftside.png',
+    front:  'textures/tyuou_front.png',
   },
   {
-    side: 'textures/tyuou.png',
+    side: 'textures/tyuou_middle_side.png',
   },
   { 
-    side_right: 'textures/tyuou_3.png',
-    side_left: 'textures/tyuou_1.png',
-    back:  'textures/tyuou_2.png',
+    side_right: 'textures/tyuou_end_leftside.png',
+    side_left: 'textures/tyuou_end_rightside.png',
+    back:  'textures/tyuou_front.png',
   }
 );
 
@@ -1785,17 +1847,17 @@ const Train_2 = TrainSettings(
   10,
   1,
   {
-    side_right: 'textures/soubu_1.png',
-    side_left: 'textures/soubu_4.png',
-    front:  'textures/soubu_3.png',
+    side_right: 'textures/soubu_end_rightside.png',
+    side_left: 'textures/soubu_end_leftside.png',
+    front:  'textures/soubu_front.png',
   },
   {
-    side: 'textures/soubu.png',
+    side: 'textures/soubu_middle_side.png',
   },
   {
-    side_right: 'textures/soubu_4.png',
-    side_left: 'textures/soubu_1.png',
-    back:  'textures/soubu_3.png',
+    side_right: 'textures/soubu_end_leftside.png',
+    side_left: 'textures/soubu_end_rightside.png',
+    back:  'textures/soubu_front.png',
   }
 );
 
@@ -1805,17 +1867,17 @@ const Train_3 = TrainSettings(
   10,
   1,
   {
-    side_right: 'textures/soubu_1.png',
-    side_left: 'textures/soubu_4.png',
-    front:  'textures/soubu_3.png',
+    side_right: 'textures/soubu_end_rightside.png',
+    side_left: 'textures/soubu_end_leftside.png',
+    front:  'textures/soubu_front.png',
   },
   {
-    side: 'textures/soubu.png',
+    side: 'textures/soubu_middle_side.png',
   },
   {
-    side_right: 'textures/soubu_4.png',
-    side_left: 'textures/soubu_1.png',
-    back:  'textures/soubu_3.png',
+    side_right: 'textures/soubu_end_leftside.png',
+    side_left: 'textures/soubu_end_rightside.png',
+    back:  'textures/soubu_front.png',
   }
 );
 
