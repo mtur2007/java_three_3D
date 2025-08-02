@@ -749,6 +749,52 @@ startLoop(); // 処理開始
 
 
 // --- 鉄橋用ユーティリティ ---
+
+// 線路の座標を指定されたmで均等に分ける為の関数
+function getPointsEveryM(curve, interval = 25) {
+  const length = curve.getLength();
+  const divisions = Math.floor(length / interval);
+  const points = [];
+
+  let num = divisions
+  for (let i = 0; i <= divisions; i++) {
+    const t = Math.min((interval * i) / length,1);
+    const point = curve.getPointAt(t).clone();
+    points.push(point);
+  }
+
+  return points;
+}
+
+// 線路から均等に空ける関数
+function RailMargin(points, margin){
+  const edit_points = structuredClone(points); // 深いコピーを作る（破壊防止）
+
+  for (let i = 0; i < points.length; i++){
+    const rear = i > 0 ? points[i - 1] : points[i];
+    const now = points[i];
+    const next = i < points.length-1 ? points[i + 1] : points[i];
+
+    let rear_atan2 = normalizeRad(Math.atan2(now.x - rear.x, now.z - rear.z));
+    let next_atan2 = normalizeRad(Math.atan2(now.x - next.x, now.z - next.z));
+    if (i === 0){
+      rear_atan2 = next_atan2 + 180 * Math.PI / 180;
+    } else if (i === points.length-1){
+      next_atan2 = rear_atan2 + 180 * Math.PI / 180;
+    }
+
+    let whole = next_atan2 - rear_atan2;
+    if (whole < 0) whole += Math.PI * 2;
+
+    const diff = rear_atan2 + whole * 0.5;
+
+    edit_points[i].x = now.x - Math.sin(diff) * margin;
+    edit_points[i].z = now.z - Math.cos(diff) * margin;
+  }
+
+  return edit_points;
+}
+
 // 柱
 function createBridgePillar(x, z, height = 5) {
   const geometry = new THREE.BoxGeometry(0.5, height-2, 0.5);
@@ -790,6 +836,43 @@ function generateBridge(curve, pillarInterval = 10, interval = 25) {
       createBridgeGirder(p, p2);
     }
   }
+}
+
+function createWall(track_1,track_2,quantity){
+  
+  const board_length_1 = track_1.getLength(track_1)/quantity;
+  const board_length_2 = track_2.getLength(track_2)/quantity;
+  const points_1 = RailMargin(getPointsEveryM(track_1, board_length_1), 0.8);
+  const points_2 = RailMargin(getPointsEveryM(track_2, board_length_2), -0.8);
+
+  const verticesArray = [];
+  const vertexArray = [];
+
+  for(let i=0; i < points_1.length; i++){
+    const coordinate1 = points_1[i]
+    verticesArray.push(coordinate1.x, coordinate1.y-0.9, coordinate1.z)
+    const coordinate2 = points_2[i]
+    verticesArray.push(coordinate2.x, coordinate2.y-0.9, coordinate2.z)
+    if (i < points_1.length-2){
+      if (i%2 === 0){vertexArray.push(i,i+1,i+2)}else{vertexArray.push(i+2,i+1,i)};
+    }
+  }
+
+  // 最後にFloat32Arrayに変換
+  const vertices = new Float32Array(verticesArray);
+  
+  // BufferGeometryにセット
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+
+  geometry.setIndex(vertexArray); // 2枚の三角形で四角形に
+  geometry.computeVertexNormals(); // 光の当たり具合を正しくする
+  
+
+  const material = new THREE.MeshStandardMaterial({ color: 0x666666, side: THREE.DoubleSide });
+  const mesh = new THREE.Mesh(geometry, material);
+  scene.add(mesh);
+  
 }
 
 // --- 駅用ユーティリティ ---
@@ -878,52 +961,6 @@ function createStation(track_1,track_2,delicacy,y,margin,a){
     
   }
 }
-
-// 線路の座標を指定されたmで均等に分ける為の関数
-function getPointsEveryM(curve, interval = 25) {
-  const length = curve.getLength();
-  const divisions = Math.floor(length / interval);
-  const points = [];
-
-  let num = divisions
-  for (let i = 0; i <= divisions; i++) {
-    const t = Math.min((interval * i) / length,1);
-    const point = curve.getPointAt(t).clone();
-    points.push(point);
-  }
-
-  return points;
-}
-
-// 線路から均等に空ける関数
-function RailMargin(points, margin){
-  const edit_points = structuredClone(points); // 深いコピーを作る（破壊防止）
-
-  for (let i = 0; i < points.length; i++){
-    const rear = i > 0 ? points[i - 1] : points[i];
-    const now = points[i];
-    const next = i < points.length-1 ? points[i + 1] : points[i];
-
-    let rear_atan2 = normalizeRad(Math.atan2(now.x - rear.x, now.z - rear.z));
-    let next_atan2 = normalizeRad(Math.atan2(now.x - next.x, now.z - next.z));
-    if (i === 0){
-      rear_atan2 = next_atan2 + 180 * Math.PI / 180;
-    } else if (i === points.length-1){
-      next_atan2 = rear_atan2 + 180 * Math.PI / 180;
-    }
-
-    let whole = next_atan2 - rear_atan2;
-    if (whole < 0) whole += Math.PI * 2;
-
-    const diff = rear_atan2 + whole * 0.5;
-
-    edit_points[i].x = now.x - Math.sin(diff) * margin;
-    edit_points[i].z = now.z - Math.cos(diff) * margin;
-  }
-
-  return edit_points;
-}
-
 
 // ホーム屋根 の作成
 function placePlatformRoof(track_1,track_2,y,quantity) {
@@ -1745,6 +1782,16 @@ const track2_doors = placePlatformDoors(track2, 0.9, door_interval, 'right');  /
 
 const track3_doors = placePlatformDoors(track3, 0.9, door_interval, 'left');  // 左側に設置
 const track4_doors = placePlatformDoors(track4, 0.9, door_interval, 'right');  // 左側に設置
+
+// 壁の生成
+const wall_start = 0.23;
+const wall_end = 0.7;
+const wall_track1 = sliceCurvePoints(line_1, wall_start, wall_end);
+const wall_track2 = sliceCurvePoints(line_2, wall_start, wall_end);
+createWall(wall_track1,wall_track2,40)
+const wall_track3 = sliceCurvePoints(line_3, wall_start, wall_end);
+const wall_track4 = sliceCurvePoints(line_4, wall_start, wall_end);
+createWall(wall_track3,wall_track4,40)
 
 // 電車の運行
 // const max_speed = 0.001 // 制限速度(最高)
