@@ -31,6 +31,10 @@ const light = new THREE.DirectionalLight(0xffffff, 0.8);
 light.position.set(20, 30, 10);
 scene.add(light);
 
+let run_STOP = false
+let quattro = 0
+let run_num = 0
+
 // --- デバッグ用 ---
 
 // ピン(マーキング)
@@ -1519,7 +1523,7 @@ function moveDoorsFromGroup(group, mode, distance = 0.32, duration = 2000) {
 
 
 // 列車の運行
-async function runTrain(trainCars, root, track_doors, door_interval, max_speed=0.002, add_speed=0.000005, stop_point=0.5, t=0) {
+async function runTrain(trainCars, root, track_doors, door_interval, max_speed=0.002, add_speed=0.000005, stop_point=0.5, start_position = 0) {
 
   const Equal_root = getPointsEveryM(root, 0.01); // spacing=0.1mごと（細かすぎたら25に）
   const totalPoints = Equal_root.length;
@@ -1527,11 +1531,12 @@ async function runTrain(trainCars, root, track_doors, door_interval, max_speed=0
   const length = root.getLength(root);
 
   let test = getPointByDistanceRatio(Equal_root, stop_point+3.4/length);
-  Map_pin(test.x,test.z, 15, 0.05)
-
+ 
   const carSpacing = door_interval / length
   
   const maxOffsetT = carSpacing * (trainCars.userData.cars.length + 1);
+
+  let t = start_position
 
   let speed = max_speed
   let stop_point_diff = 0
@@ -1545,11 +1550,12 @@ async function runTrain(trainCars, root, track_doors, door_interval, max_speed=0
   speed = max_speed
   
   test = getPointByDistanceRatio(Equal_root, brake_point);
+
   let train_stoped = false
+  if (quattro > 0){train_stoped = true}
 
-  trainCars.visible = true;   // 再表示する
-  console.log(trainCars)
-
+  trainCars.visible = false;   // 再表示する
+ 
   let offsetT = NaN;
   let safeIndex = NaN
 
@@ -1557,16 +1563,25 @@ async function runTrain(trainCars, root, track_doors, door_interval, max_speed=0
   let Tan = NaN
   let car = NaN // ← ここだけ変わる
 
+  run_num += 1
+
   // ランダムな秒数（1000〜5000ミリ秒）
-  await sleep( 1000 + Math.random() * 20000);
+  await sleep( 1000 + Math.random() * 15000);
+ 
+  trainCars.visible = true;   // 再表示する
   
   async function runCar() {
     if (t >= 1 + maxOffsetT) {
+      
+      if (quattro > 0){
+        quattro -= 1
+        run_num -= 1
+        return
+      };
+
       speed = max_speed
       train_stoped = false
       t = 0
-
-      // ランダムな秒数（1000〜5000ミリ秒）
       await sleep( 1000 + Math.random() * 20000);
       // return NaN
       
@@ -1612,21 +1627,42 @@ async function runTrain(trainCars, root, track_doors, door_interval, max_speed=0
       speed = 0
 
       await sleep(3000); // 3秒待ってからまた開ける
+      if (run_STOP){
+        trainCars.visible = false;
+        run_num -= 1
+        return
+      }
       await moveDoorsFromGroup(track_doors,1);
 
       await sleep(7000); // 3秒待ってからまた開ける
+      if (run_STOP){
+        trainCars.visible = false;
+        moveDoorsFromGroup(track_doors,0);
+        run_num -= 1
+        return
+      }
       await moveDoorsFromGroup(track_doors,0)
-
+      if (run_STOP){
+        trainCars.visible = false;
+        run_num -= 1
+        return
+      }
       await sleep(3000); // 3秒待ってからまた開ける
 
     }
 
-    if (RUN_STOP === true){return}
+    if (run_STOP){
+      trainCars.visible = false;
+      run_num -= 1
+      return
+    }
 
     requestAnimationFrame(runCar);
+    
   }
 
   runCar();
+
 }
 
 // --- リサイズ対応 ---
@@ -1826,7 +1862,7 @@ const tunnel_1 = sliceCurvePoints(line_4, tunnel_start, tunnel_end);
 // const points_3 = sliceCurvePoints(line_4, tunnel_start, tunnel_end);
 const tunnel_2 = sliceCurvePoints(line_4, tunnel_start, tunnel_end);
 const quantity = 3
-console.log(tunnel_1.getLength())
+
 const board_length_1 = tunnel_1.getLength(line_4)/quantity;
 const board_length_2 = tunnel_2.getLength(line_4)/quantity;
 const points_1 = RailMargin(getPointsEveryM(tunnel_1, board_length_1), 1);
@@ -2000,8 +2036,77 @@ const reversedCurve_3 = new THREE.CatmullRomCurve3(
 );
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// ボタン取得
+let button = document.getElementById("toggle-crossover");
+let crossoverRequested = false;
+let run_quattro = 0
+// クアトロ交差を実行する関数
+async function startQuadrupleCrossDemo() {
+  
+  run_quattro += 1
+  const run_number = run_quattro
+  
+  // ボタン押下イベント（要求をフラグにする）
+  button.addEventListener("click", () => {
+    crossoverRequested = true;
+    button.innerText = `立体交差 [ 準備中... ]（列車未撤収 ${run_num} 編成）`;
+  });
 
-let RUN_STOP = false
+  crossoverRequested = true;
+
+  while (run_quattro != run_number){
+    await sleep(2000)
+  }
+
+  run_STOP = true
+  quattro = 4
+
+  while (run_num > 0){
+    if (run_quattro > run_number){
+      return
+    }  
+    button.innerText = `立体交差 [ 準備中... ]（列車未撤収 ${run_num} 編成）`;
+    await sleep(2000)
+  }
+
+  run_STOP = false
+
+  // 4本の列車を同時にスタート
+  runTrain(Train_3, reversedCurve_3, track3_doors, door_interval, max_speed, add_speed, 0.501, 0.5)
+  runTrain(Train_4, reversedCurve_4, track4_doors, door_interval, max_speed, add_speed, 0.5439, 0.5)
+  runTrain(Train_1, line_1, track1_doors, door_interval, max_speed, add_speed, 0.7695, -0.4)
+  runTrain(Train_2, line_2, track2_doors, door_interval, max_speed, add_speed, 0.777 -0.4)
+
+  while (quattro > 0){
+    if (run_quattro > run_number){
+      return
+    }  
+    button.innerText = `立体交差 実行中...（走行中 ${run_num}）`;
+    await sleep(2000)
+  }
+
+  button.innerText = `ランダム立体交差（クアトロ交差）切替`
+
+  runTrain(Train_1, line_1, track1_doors, door_interval, max_speed, add_speed, 0.7695)
+  runTrain(Train_2, line_2, track2_doors, door_interval, max_speed, add_speed, 0.777)
+  runTrain(Train_3, reversedCurve_3, track3_doors, door_interval, max_speed, add_speed, 0.501)
+  runTrain(Train_4, reversedCurve_4, track4_doors, door_interval, max_speed, add_speed, 0.5439)
+
+  run_quattro = 0
+  crossoverRequested = false;
+}
+
+document.getElementById("toggle-crossover").addEventListener("click", () => {
+  camera.position.set(-5, 7, -70);
+  cameraAngleX = 0.1
+  cameraAngleY = 2.5;
+
+  startQuadrupleCrossDemo();  // ← ここで関数を呼び出す
+});
+
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 runTrain(Train_1, line_1, track1_doors, door_interval, max_speed, add_speed, 0.7695)
 runTrain(Train_2, line_2, track2_doors, door_interval, max_speed, add_speed, 0.777)
 runTrain(Train_3, reversedCurve_3, track3_doors, door_interval, max_speed, add_speed, 0.501)

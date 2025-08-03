@@ -75,6 +75,27 @@
       opacity: 0.5;
     }
 
+    .control-square-button {
+    position: fixed;
+    width: 400px;
+    height: 40px;
+    font-size: 24px;
+    border: none;
+    border-radius: 4px; /* ← 四角っぽい角丸（完全に四角なら 0 に） */
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    z-index: 20;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    transition: all 0.1s ease-in-out;
+
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
 
   /* ホバー（マウスを乗せたとき）で暗くする */
   .control-button:hover {
@@ -88,17 +109,28 @@
   }
 </style>
 
-    </style>
-    
-    <button id="speed-up" class="control-button" style="left: 20px; bottom: 200px;">▶︎▷</button>
-    <button id="speed-down" class="control-button" style="left: 95px; bottom: 200px;">◀︎◁</button>
-    <button id="btn-up" class="control-button" style="left: 20px; bottom: 120px;">🔺</button>
-    <button id="btn-down" class="control-button" style="left: 20px; bottom: 40px;">🔻</button>
-        
+  </style>
+  
+  <button id="speed-up" class="control-button" style="left: 20px; bottom: 200px;">▶︎▷</button>
+  <button id="speed-down" class="control-button" style="left: 95px; bottom: 200px;">◀︎◁</button>
+  <button id="btn-up" class="control-button" style="left: 20px; bottom: 120px;">🔺</button>
+  <button id="btn-down" class="control-button" style="left: 20px; bottom: 40px;">🔻</button>
+      
   <!-- 左スティック（左下に表示） -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.8.6/nipplejs.min.js"></script>
   <div id="left-stick" style="user-select: none; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; position: fixed; left: 7vw; bottom: 0; width: 40vw; height: 60vh; z-index: 10;"></div>
   <div id="right-stick" style="user-select: none; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; position: fixed; right: 7vw; bottom: 0; width: 40vw; height: 60vh; z-index: 10;"></div>
+
+  <button id="toggle-crossover" class="control-square-button" style="
+    position: absolute;
+    left: 20px;
+    top: 20px;
+    padding: 10px;
+    font-size: 14px;
+    z-index: 10;
+    backdrop-filter: blur(4px); /* iOSっぽいガラス感 */
+    ">ランダム立体交差（クアトロ交差）切替</button>
+
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script type="module" src="js/main.js"></script>
