@@ -797,7 +797,7 @@ function RailMargin(points, margin){
 
 // 柱
 function createBridgePillar(x, z, height = 5) {
-  const geometry = new THREE.BoxGeometry(0.5, height-2, 0.5);
+  const geometry = new THREE.BoxGeometry(0.2, height-2, 0.2);
   const material = new THREE.MeshStandardMaterial({ color: 0x555555 });
   const pillar = new THREE.Mesh(geometry, material);
   pillar.position.set(x, height / 2, z);
@@ -811,7 +811,7 @@ function createBridgeGirder(start, end) {
   const dy = end.y - start.y;
 
   const length = Math.sqrt(dx * dx + dz * dz);
-  const geometry = new THREE.BoxGeometry(length, 0.2 ,2);
+  const geometry = new THREE.BoxGeometry(length, 0.2 ,1.75);
   const material = new THREE.MeshStandardMaterial({ color: 0x888888 });
   const girder = new THREE.Mesh(geometry, material);
   girder.position.set(
@@ -838,21 +838,21 @@ function generateBridge(curve, pillarInterval = 10, interval = 25) {
   }
 }
 
-function createWall(track_1,track_2,quantity){
+function createWall(track_1,track_2,quantity,margin_1=0.8,margin_2=-0.8,y_1=0,y_2=0){
   
   const board_length_1 = track_1.getLength(track_1)/quantity;
   const board_length_2 = track_2.getLength(track_2)/quantity;
-  const points_1 = RailMargin(getPointsEveryM(track_1, board_length_1), 0.8);
-  const points_2 = RailMargin(getPointsEveryM(track_2, board_length_2), -0.8);
+  const points_1 = RailMargin(getPointsEveryM(track_1, board_length_1), margin_1);
+  const points_2 = RailMargin(getPointsEveryM(track_2, board_length_2), margin_2);
 
   const verticesArray = [];
   const vertexArray = [];
 
   for(let i=0; i < points_1.length; i++){
     const coordinate1 = points_1[i]
-    verticesArray.push(coordinate1.x, coordinate1.y-0.9, coordinate1.z)
+    verticesArray.push(coordinate1.x, coordinate1.y+y_1, coordinate1.z)
     const coordinate2 = points_2[i]
-    verticesArray.push(coordinate2.x, coordinate2.y-0.9, coordinate2.z)
+    verticesArray.push(coordinate2.x, coordinate2.y+y_2, coordinate2.z)
     if (i < points_1.length-2){
       if (i%2 === 0){vertexArray.push(i,i+1,i+2)}else{vertexArray.push(i+2,i+1,i)};
     }
@@ -954,7 +954,7 @@ function createStation(track_1,track_2,delicacy,y,margin,a){
     const material = new THREE.MeshBasicMaterial({ color: 0x869989 });
     const mesh = new THREE.Mesh(geometry, materials);
 
-    mesh.rotation.x = 1.57;
+    mesh.rotation.x = 90 * Math.PI / 180;
     mesh.position.y = y-0.4; // 高さ1.5に移動
 
     scene.add(mesh);
@@ -1527,7 +1527,7 @@ async function runTrain(trainCars, root, track_doors, door_interval, max_speed=0
   const length = root.getLength(root);
 
   let test = getPointByDistanceRatio(Equal_root, stop_point+3.4/length);
-  // Map_pin(test.x,test.z, 15, 0.05)
+  Map_pin(test.x,test.z, 15, 0.05)
 
   const carSpacing = door_interval / length
   
@@ -1621,6 +1621,8 @@ async function runTrain(trainCars, root, track_doors, door_interval, max_speed=0
 
     }
 
+    if (RUN_STOP === true){return}
+
     requestAnimationFrame(runCar);
   }
 
@@ -1657,48 +1659,65 @@ let Points_2 = []
 let Points_3 = []
 
 y = 7
+const x_plus = 10
+const z_plus = 0
+const points = [
+  new THREE.Vector3(7+x_plus, y+0.7, -140.601+z_plus),
+  new THREE.Vector3(0.312+x_plus, y+0.5, -104.023+z_plus),
+  new THREE.Vector3(-14.196+x_plus, y+2.3, -146.858+z_plus),
+  new THREE.Vector3(-4.561+x_plus, y+2.3, -109.569+z_plus),
+  new THREE.Vector3(-15.657+x_plus, y+2.3, -146.520+z_plus),
+  new THREE.Vector3(-6.022+x_plus, y+2.3, -109.232+z_plus),
+  new THREE.Vector3(5+x_plus, y+0.4, -140.151+z_plus),
+  new THREE.Vector3(-5.198+x_plus, y-0.5, -107.883+z_plus),
+]
+
 // --- JR中央線 track1 ---
 Points_0 = [
 
-  new THREE.Vector3(30, y+1, -135),
+  points[0],
+  points[1],
+  // points[2],
+  
+  // new THREE.Vector3(31-1, y+0.7, -135),
+  // new THREE.Vector3(20-1, y+0.5, -100),
 
-  new THREE.Vector3(20, y+0.5, -100),
-
-  new THREE.Vector3(6, y, -50),
-  new THREE.Vector3(4.8, y, -30),
+  new THREE.Vector3(5.5, y, -50),
 
   // new THREE.Vector3(4.8, y, -20),
   // new THREE.Vector3(4.8, y, 40),
-
+  new THREE.Vector3(4.8, y, -30),
   new THREE.Vector3(4.8, y, 50),     // お茶の水駅上空
   new THREE.Vector3(3,y, 90), // 高架にする（y = 5）
 ];
 // --- JR総武線 track2 ---
 Points_1 = [
 
-  new THREE.Vector3(15, y+4, -140),
+  points[2],
+  points[3],
+  // new THREE.Vector3(15-0.5, y+2.3, -140),
+  // new THREE.Vector3(16-0.5, y+2.3, -101.5),
 
-  new THREE.Vector3(18, y+3, -110),
+  new THREE.Vector3(3-0.5, y, -50),
 
-  new THREE.Vector3(3, y, -50),
-  new THREE.Vector3(0.8, y, -30), 
-
-  // new THREE.Vector3(0.8, y, -20),
-  // new THREE.Vector3(0.8, y, 40),
-
+  new THREE.Vector3(0.8, y, -25),
   new THREE.Vector3(0.8, y, 50),
   new THREE.Vector3(-2, y, 90),
 ];
-
+Map_pin(12-0.5, -80.5)
 // --- JR総武線 track3 ---
 Points_2 = [
-  
-  new THREE.Vector3(13, y+4, -140),
-  new THREE.Vector3(16, y+3, -110),
-  new THREE.Vector3(1, y, -50),
-  new THREE.Vector3(-0.8, y, -30),
 
-  // new THREE.Vector3(-0.8, y, -20),
+  points[4],
+  points[5],
+
+  // new THREE.Vector3(13, y+2.3, -140),
+  // new THREE.Vector3(14, y+2.3, -101.5),
+
+  new THREE.Vector3(1, y, -50),
+  // new THREE.Vector3(-0.8, y, -30),
+
+  new THREE.Vector3(-0.8, y, -20),
   // new THREE.Vector3(-0.8, y, 40),
 
   new THREE.Vector3(-0.8, y, 50),     // お茶の水駅上空
@@ -1707,18 +1726,24 @@ Points_2 = [
 
 // --- JR中央線 track4 ---
 Points_3 = [ 
-
-  new THREE.Vector3(28, y+1, -135),
-  new THREE.Vector3(14, y-0.5, -105),
-  new THREE.Vector3(-2, y, -50),
-  new THREE.Vector3(-4.8, y, -30),
+  points[6],
+  points[7],
+  // points[8],
+  // points[9],
+  // points[10],
+  // points[11],
+  // new THREE.Vector3(28, y+0.4, -135),
+  // new THREE.Vector3(14.5, y-0.4, -105),
+  new THREE.Vector3(-2.5, y, -50),
   
-  // new THREE.Vector3(-4.8, y, -20),
+  new THREE.Vector3(-4.8, y, -20),
   // new THREE.Vector3(-4.8, y, 30),
 
   new THREE.Vector3(-4.8, y, 40),
   new THREE.Vector3(-9, y, 90),
 ];
+
+Map_pin(-8, -20)
 
 // 指定したポイントから線(線路の軌道)を生成
 const line_1 = new THREE.CatmullRomCurve3(Points_0);
@@ -1784,14 +1809,56 @@ const track3_doors = placePlatformDoors(track3, 0.9, door_interval, 'left');  //
 const track4_doors = placePlatformDoors(track4, 0.9, door_interval, 'right');  // 左側に設置
 
 // 壁の生成
-const wall_start = 0.23;
+const wall_start = 0.25;
 const wall_end = 0.7;
 const wall_track1 = sliceCurvePoints(line_1, wall_start, wall_end);
 const wall_track2 = sliceCurvePoints(line_2, wall_start, wall_end);
-createWall(wall_track1,wall_track2,40)
+createWall(wall_track1,wall_track2,40,0.8,-0.8,-0.9,-0.9)
 const wall_track3 = sliceCurvePoints(line_3, wall_start, wall_end);
 const wall_track4 = sliceCurvePoints(line_4, wall_start, wall_end);
-createWall(wall_track3,wall_track4,40)
+createWall(wall_track3,wall_track4,40,0.8,-0.8,-0.9,-0.9)
+
+const tunnel_start = 0.16;
+const tunnel_end = 0.24;
+// const tunnel_start = 0.25;
+// const tunnel_end = 0.7;
+const tunnel_1 = sliceCurvePoints(line_4, tunnel_start, tunnel_end);
+// const points_3 = sliceCurvePoints(line_4, tunnel_start, tunnel_end);
+const tunnel_2 = sliceCurvePoints(line_4, tunnel_start, tunnel_end);
+const quantity = 3
+console.log(tunnel_1.getLength())
+const board_length_1 = tunnel_1.getLength(line_4)/quantity;
+const board_length_2 = tunnel_2.getLength(line_4)/quantity;
+const points_1 = RailMargin(getPointsEveryM(tunnel_1, board_length_1), 1);
+const points_2 = RailMargin(getPointsEveryM(tunnel_2, board_length_2), -1);
+
+createWall(tunnel_1,tunnel_1,40,-0.9,-0.9,-1,1.5)
+createWall(tunnel_1,tunnel_1,40,0.9,0.9,-1,1.5)
+
+
+for(let i=0; i < points_1.length-1; i++){
+  const coordinate1 = points_1[i]
+  const coordinate2 = points_2[i]
+  
+  const coordinate4 = points_1[i+1]
+  const coordinate3 = points_2[i+1]
+
+  const shape = new THREE.Shape();
+  shape.moveTo(coordinate1.x, coordinate1.z);
+  shape.lineTo( coordinate2.x, coordinate2.z);
+  shape.lineTo(coordinate3.x, coordinate3.z);
+  shape.lineTo(coordinate4.x, coordinate4.z);
+
+  const geometry = new THREE.ExtrudeGeometry(shape, { depth: 0.4, bevelEnabled: false });
+  const material = new THREE.MeshBasicMaterial({ color: 0x333333 });
+  const mesh = new THREE.Mesh(geometry, material);
+
+  mesh.rotation.x = 91.5 * Math.PI / 180;
+  mesh.position.y = 5.3; // 高さ1.5に移動
+
+  scene.add(mesh);
+
+}
 
 // 電車の運行
 // const max_speed = 0.001 // 制限速度(最高)
@@ -1932,12 +1999,13 @@ const reversedCurve_3 = new THREE.CatmullRomCurve3(
   line_3.getPoints(100).reverse()
 );
 
-runTrain(Train_1, line_1, track1_doors, door_interval, max_speed, add_speed, 0.7745)
-runTrain(Train_2, line_2, track2_doors, door_interval, max_speed, add_speed, 0.7775)
-runTrain(Train_3, reversedCurve_3, track3_doors, door_interval, max_speed, add_speed, 0.4985)
-runTrain(Train_4, reversedCurve_4, track4_doors, door_interval, max_speed, add_speed, 0.5625)
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+let RUN_STOP = false
+runTrain(Train_1, line_1, track1_doors, door_interval, max_speed, add_speed, 0.7695)
+runTrain(Train_2, line_2, track2_doors, door_interval, max_speed, add_speed, 0.777)
+runTrain(Train_3, reversedCurve_3, track3_doors, door_interval, max_speed, add_speed, 0.501)
+runTrain(Train_4, reversedCurve_4, track4_doors, door_interval, max_speed, add_speed, 0.5439)
 
 // カメラ操作 ----------------------------------------------------------------
 
