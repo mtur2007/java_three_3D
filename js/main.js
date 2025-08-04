@@ -771,8 +771,9 @@ function getPointsEveryM(curve, interval = 25) {
 }
 
 // 線路から均等に空ける関数
-function RailMargin(points, margin){
+function RailMargin(points, margin, angle=false){
   const edit_points = structuredClone(points); // 深いコピーを作る（破壊防止）
+  const angles = []
 
   for (let i = 0; i < points.length; i++){
     const rear = i > 0 ? points[i - 1] : points[i];
@@ -794,9 +795,10 @@ function RailMargin(points, margin){
 
     edit_points[i].x = now.x - Math.sin(diff) * margin;
     edit_points[i].z = now.z - Math.cos(diff) * margin;
+    
+    angles.push(diff)
   }
-
-  return edit_points;
+  if (angle){return [edit_points,angles]}else{return edit_points}
 }
 
 // 柱
@@ -840,8 +842,127 @@ function generateBridge(curve, pillarInterval = 10, interval = 25) {
       createBridgeGirder(p, p2);
     }
   }
+} 
+
+//  架線柱 トラス型                  ,__________|¯'¯|_______________|¯'¯|__________,
+function createCatenaryPole(left_height, right_height, beamLength, beam_height, makes) {
+  const pos_x = 0 //　             |_|_/_\_/_\_|_|_/_\_/_\_/_\_/_\_|_|_/_\_/_\_|_|
+  const pos_y = 0 //　             |X|/      ___|___             ___|___      \|X|
+  const pos_z = 0 //　             |X|        ¯¯¥¯¯               ¯¯¥¯¯        |X|
+  const Poles = new THREE.Group(); // 　　　 　　　　                            |X|
+  const Side_len = 0.15 //　       |X|                                         |X|
+  const board_rotation = 40 * Math.PI / 180; // /_ 45度  　　　                 |X|
+  //　                             |X|__,I,,,I,__,I,,,I,_____,I,,,I,__,I,,,I,__|X|
+  const rotation_x_len = Math.sin(board_rotation)*Side_len*0.5
+  const board_xlen = (Side_len/rotation_x_len)*rotation_x_len+rotation_x_len
+  const boardGeometry = new THREE.BoxGeometry(board_xlen, 0.03, 0.01);
+  const poleMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
+  const board = new THREE.InstancedMesh(boardGeometry, poleMaterial, ((right_height/Side_len)*4+(left_height/Side_len)*4+(beamLength/Side_len)*4));
+
+  right_height = right_height-right_height%Side_len
+  left_height = left_height-left_height%Side_len
+  beam_height = beam_height-beam_height%Side_len
+  beamLength = beamLength-beamLength%Side_len
+
+  let plus_index = 0
+  const Pole = new THREE.Group();
+
+  if (right_height != 0){
+    for (let i =0; i<right_height/Side_len; i++){
+      if (i%2===0){
+        object_update({ins_obj: board, ins_idx: plus_index+i*4, pos_x: pos_x,  pos_y: pos_y+Side_len*i+Side_len*0.5, pos_z: pos_z+Side_len*0.5, rot_x: NaN, rot_y: 0 * Math.PI / 180, rot_z: board_rotation,scale: NaN})      
+        object_update({ins_obj: board, ins_idx: plus_index+i*4+1, pos_x: pos_x+Side_len*0.5,  pos_y: pos_y+Side_len*i+Side_len*0.5, pos_z: pos_z, rot_x: NaN, rot_y: 90 * Math.PI / 180, rot_z: board_rotation,scale: NaN})  
+        object_update({ins_obj: board, ins_idx: plus_index+i*4+2, pos_x: pos_x,  pos_y: pos_y+Side_len*i+Side_len*0.5, pos_z: pos_z-Side_len*0.5, rot_x: NaN, rot_y: 180 * Math.PI / 180, rot_z: board_rotation,scale: NaN}) 
+        object_update({ins_obj: board, ins_idx: plus_index+i*4+3, pos_x: pos_x-Side_len*0.5,  pos_y: pos_y+Side_len*i+Side_len*0.5, pos_z: pos_z, rot_x: NaN, rot_y: 270 * Math.PI / 180, rot_z: board_rotation,scale: NaN}) 
+      } else {
+        object_update({ins_obj: board, ins_idx: plus_index+i*4, pos_x: pos_x,  pos_y: pos_y+Side_len*i+Side_len*0.5, pos_z: pos_z+Side_len*0.5, rot_x: NaN, rot_y: 0 * Math.PI / 180, rot_z: -board_rotation,scale: NaN}) 
+        object_update({ins_obj: board, ins_idx: plus_index+i*4+1, pos_x: pos_x+Side_len*0.5,  pos_y: pos_y+Side_len*i+Side_len*0.5, pos_z: pos_z, rot_x: NaN, rot_y: 90 * Math.PI / 180, rot_z: -board_rotation,scale: NaN}) 
+        object_update({ins_obj: board, ins_idx: plus_index+i*4+2, pos_x: pos_x,  pos_y: pos_y+Side_len*i+Side_len*0.5, pos_z: pos_z-Side_len*0.5, rot_x: NaN, rot_y: 180 * Math.PI / 180, rot_z: -board_rotation,scale: NaN})
+        object_update({ins_obj: board, ins_idx: plus_index+i*4+3, pos_x: pos_x-Side_len*0.5,  pos_y: pos_y+Side_len*i+Side_len*0.5, pos_z: pos_z, rot_x: NaN, rot_y: 270 * Math.PI / 180, rot_z: -board_rotation,scale: NaN}) 
+      }
+      
+    }
+    const poleGeometry_right = new THREE.BoxGeometry(0.03, right_height, 0.03);
+    const pole_right = new THREE.Mesh(poleGeometry_right, poleMaterial);
+    pole_right.position.set(pos_x+Side_len*0.5,pos_y+right_height*0.5,pos_z+Side_len*0.5)
+    Pole.add(pole_right.clone());
+    pole_right.position.set(pos_x+Side_len*0.5,pos_y+right_height*0.5,pos_z-Side_len*0.5)
+    Pole.add(pole_right.clone());
+    pole_right.position.set(pos_x-Side_len*0.5,pos_y+right_height*0.5,pos_z+Side_len*0.5)
+    Pole.add(pole_right.clone());
+    pole_right.position.set(pos_x-Side_len*0.5,pos_y+right_height*0.5,pos_z-Side_len*0.5)
+    Pole.add(pole_right.clone());
+  
+    plus_index += (right_height/Side_len)*4
+  }
+
+  if (left_height != 0){
+    const move_x = beamLength-Side_len
+    for (let i =0; i<left_height/Side_len; i++){
+      if (i%2===0){
+        object_update({ins_obj: board, ins_idx: plus_index+i*4, pos_x: pos_x+move_x,  pos_y: pos_y+Side_len*i+Side_len*0.5, pos_z: pos_z+Side_len*0.5, rot_x: NaN, rot_y: 0 * Math.PI / 180, rot_z: board_rotation,scale: NaN})      
+        object_update({ins_obj: board, ins_idx: plus_index+i*4+1, pos_x: pos_x+Side_len*0.5+move_x,  pos_y: pos_y+Side_len*i+Side_len*0.5, pos_z: pos_z, rot_x: NaN, rot_y: 90 * Math.PI / 180, rot_z: board_rotation,scale: NaN})  
+        object_update({ins_obj: board, ins_idx: plus_index+i*4+2, pos_x: pos_x+move_x,  pos_y: pos_y+Side_len*i+Side_len*0.5, pos_z: pos_z-Side_len*0.5, rot_x: NaN, rot_y: 180 * Math.PI / 180, rot_z: board_rotation,scale: NaN}) 
+        object_update({ins_obj: board, ins_idx: plus_index+i*4+3, pos_x: pos_x-Side_len*0.5+move_x,  pos_y: pos_y+Side_len*i+Side_len*0.5, pos_z: pos_z, rot_x: NaN, rot_y: 270 * Math.PI / 180, rot_z: board_rotation,scale: NaN}) 
+      } else {
+        object_update({ins_obj: board, ins_idx: plus_index+i*4, pos_x: pos_x+move_x,  pos_y: pos_y+Side_len*i+Side_len*0.5, pos_z: pos_z+Side_len*0.5, rot_x: NaN, rot_y: 0 * Math.PI / 180, rot_z: -board_rotation,scale: NaN}) 
+        object_update({ins_obj: board, ins_idx: plus_index+i*4+1, pos_x: pos_x+Side_len*0.5+move_x,  pos_y: pos_y+Side_len*i+Side_len*0.5, pos_z: pos_z, rot_x: NaN, rot_y: 90 * Math.PI / 180, rot_z: -board_rotation,scale: NaN}) 
+        object_update({ins_obj: board, ins_idx: plus_index+i*4+2, pos_x: pos_x+move_x,  pos_y: pos_y+Side_len*i+Side_len*0.5, pos_z: pos_z-Side_len*0.5, rot_x: NaN, rot_y: 180 * Math.PI / 180, rot_z: -board_rotation,scale: NaN})
+        object_update({ins_obj: board, ins_idx: plus_index+i*4+3, pos_x: pos_x-Side_len*0.5+move_x,  pos_y: pos_y+Side_len*i+Side_len*0.5, pos_z: pos_z, rot_x: NaN, rot_y: 270 * Math.PI / 180, rot_z: -board_rotation,scale: NaN}) 
+      }
+    }
+    const poleGeometry_left = new THREE.BoxGeometry(0.03, left_height, 0.03);
+    const pole_left = new THREE.Mesh(poleGeometry_left, poleMaterial);
+    pole_left.position.set(pos_x+Side_len*0.5+move_x,pos_y+left_height*0.5,pos_z+Side_len*0.5)
+    Pole.add(pole_left.clone());
+    pole_left.position.set(pos_x+Side_len*0.5+move_x,pos_y+left_height*0.5,pos_z-Side_len*0.5)
+    Pole.add(pole_left.clone());
+    pole_left.position.set(pos_x-Side_len*0.5+move_x,pos_y+left_height*0.5,pos_z+Side_len*0.5)
+    Pole.add(pole_left.clone());
+    pole_left.position.set(pos_x-Side_len*0.5+move_x,pos_y+left_height*0.5,pos_z-Side_len*0.5)
+    Pole.add(pole_left.clone());
+  
+    plus_index += (left_height/Side_len)*4
+  }
+  
+  // scene.add(Pole2)
+
+  for (let i =0; i<beamLength/Side_len; i++){
+    if (i%2===0){
+      object_update({ins_obj: board, ins_idx: plus_index+i*4, pos_y: beam_height-Side_len*0.5,  pos_x: Side_len*i, pos_z: Side_len*0.5, rot_y: NaN, rot_x: 0 * Math.PI / 180, rot_z: board_rotation,scale: NaN})      
+      object_update({ins_obj: board, ins_idx: plus_index+i*4+1, pos_y: beam_height,  pos_x: Side_len*i, pos_z: 0, rot_y: NaN, rot_x: 270 * Math.PI / 180, rot_z: board_rotation,scale: NaN})  
+      object_update({ins_obj: board, ins_idx: plus_index+i*4+2, pos_y: beam_height-Side_len*0.5,  pos_x: Side_len*i, pos_z: -Side_len*0.5, rot_y: NaN, rot_x: 180 * Math.PI / 180, rot_z: board_rotation,scale: NaN}) 
+      object_update({ins_obj: board, ins_idx: plus_index+i*4+3, pos_y: beam_height-Side_len,  pos_x: Side_len*i, pos_z: 0, rot_y: NaN, rot_x: 90 * Math.PI / 180, rot_z: board_rotation,scale: NaN}) 
+    } else {
+      object_update({ins_obj: board, ins_idx: plus_index+i*4, pos_y: beam_height-Side_len*0.5,  pos_x: Side_len*i, pos_z: Side_len*0.5, rot_y: NaN, rot_x: 0 * Math.PI / 180, rot_z: -board_rotation,scale: NaN})      
+      object_update({ins_obj: board, ins_idx: plus_index+i*4+1, pos_y: beam_height,  pos_x: Side_len*i, pos_z: 0, rot_y: NaN, rot_x: 270 * Math.PI / 180, rot_z: -board_rotation,scale: NaN})  
+      object_update({ins_obj: board, ins_idx: plus_index+i*4+2, pos_y: beam_height-Side_len*0.5,  pos_x: Side_len*i, pos_z: -Side_len*0.5, rot_y: NaN, rot_x: 180 * Math.PI / 180, rot_z: -board_rotation,scale: NaN}) 
+      object_update({ins_obj: board, ins_idx: plus_index+i*4+3, pos_y: beam_height-Side_len,  pos_x: Side_len*i, pos_z: 0, rot_y: NaN, rot_x: 90 * Math.PI / 180, rot_z: -board_rotation,scale: NaN}) 
+    }
+  }
+
+  const poleGeometry_beam = new THREE.BoxGeometry(beamLength, 0.03, 0.03);
+  const pole_beam = new THREE.Mesh(poleGeometry_beam, poleMaterial);
+  pole_beam.position.set(beamLength*0.5-Side_len*0.5,beam_height-Side_len,Side_len*0.5)
+  Pole.add(pole_beam.clone());
+  pole_beam.position.set(beamLength*0.5-Side_len*0.5,beam_height,-Side_len*0.5)
+  Pole.add(pole_beam.clone());
+  pole_beam.position.set(beamLength*0.5-Side_len*0.5,beam_height,Side_len*0.5)
+  Pole.add(pole_beam.clone());
+  pole_beam.position.set(beamLength*0.5-Side_len*0.5,beam_height-Side_len,-Side_len*0.5)
+  Pole.add(pole_beam.clone());
+
+  Pole.add(board)
+
+  Pole.rotation.y += -90 * Math.PI / 180
+  plus_index += (beamLength/Side_len)*4
+
+  for (let i=0; i<makes; i++){Poles.add(Pole.clone())}
+  return Poles
 }
 
+
+// 壁の生成
 function createWall(track_1,track_2,quantity,margin_1=0.8,margin_2=-0.8,y_1=0,y_2=0){
   
   const board_length_1 = track_1.getLength(track_1)/quantity;
@@ -1896,6 +2017,32 @@ for(let i=0; i < points_1.length-1; i++){
 
 }
 
+// 架線柱の生成
+const point_data = RailMargin(getPointsEveryM(wall_track4, 8), 1, true);
+const pole_line = point_data[0]
+const pole_angle = point_data[1]
+console.log(pole_line.length)
+// right_height, left_height, beamLength, beam_height
+const Poles = createCatenaryPole(0,3.2,1.4,2.3, 5)
+for(let i=0; i<Poles.children.length; i++){
+  Poles.children[i].rotation.y += pole_angle[i]
+  Poles.children[i].position.set(pole_line[i].x,pole_line[i].y-1,pole_line[i].z)
+}
+scene.add(Poles)
+
+const poletrak = sliceCurvePoints(line_3, 0, 0.7);
+const point_data2 = RailMargin(getPointsEveryM(poletrak, 8), 1, true);
+const pole_line2 = point_data2[0]
+const pole_angle2 = point_data2[1]
+console.log(pole_line2.length)
+// right_height, left_height, beamLength, beam_height
+const Poles2 = createCatenaryPole(2.8,2.8,3.5,2.3, 13)
+for(let i=0; i<Poles2.children.length; i++){
+  Poles2.children[i].rotation.y += pole_angle2[i]
+  Poles2.children[i].position.set(pole_line2[i].x,pole_line2[i].y-1,pole_line2[i].z)
+}
+scene.add(Poles2)
+
 // 電車の運行
 // const max_speed = 0.001 // 制限速度(最高)
 // const add_speed = 0.0000010 // 追加速度(加速/減速)
@@ -2147,7 +2294,6 @@ let moveDown = false;
 document.getElementById('speed-up').addEventListener('touchstart', () => speedUp = true);
 document.getElementById('speed-up').addEventListener('mousedown', () => speedUp = true);
 
-
 document.getElementById('speed-down').style.display = 'none';
 document.getElementById('speed-down').addEventListener('touchstart', () => speedUp = true);
 document.getElementById('speed-down').addEventListener('mousedown', () => speedUp = true);
@@ -2325,6 +2471,36 @@ const ceiling_Spacing = (train_width+car_Spacing) +2
 const beam_Spacing = ceiling_Spacing/9
 const Podium_deck_width = ceiling_Spacing*5 + beam_Spacing*3
 
+function object_update({
+  ins_obj = NaN,
+  ins_idx = NaN,
+  pos_x = NaN,
+  pos_y = NaN,
+  pos_z = NaN,
+  rot_x = NaN,
+  rot_y = NaN,
+  rot_z = NaN,
+  scale = NaN} = {}) {
+    
+    const dummy = new THREE.Object3D();
+    // 位置の更新
+    if (!Number.isNaN(pos_x)) dummy.position.x = pos_x;
+    if (!Number.isNaN(pos_y)) dummy.position.y = pos_y;
+    if (!Number.isNaN(pos_z)) dummy.position.z = pos_z;
+
+    // 回転の更新
+    if (!Number.isNaN(rot_x)) dummy.rotation.x = rot_x;
+    if (!Number.isNaN(rot_y)) dummy.rotation.y = rot_y;
+    if (!Number.isNaN(rot_z)) dummy.rotation.z = rot_z;
+
+    // スケールの更新
+    if (!Number.isNaN(scale)) dummy.scale.setScalar(scale);
+
+    dummy.updateMatrix();                       // 行列計算更新
+    ins_obj.setMatrixAt(ins_idx, dummy.matrix); // i番目のインスタンスに行列を適用
+    ins_obj.instanceMatrix.needsUpdate = true;  // 更新フラグ
+  }
+
 if (true) {
 
   // 鉄のような金属マテリアル設定
@@ -2403,36 +2579,6 @@ if (true) {
   geometry = new THREE.BoxGeometry(Podium_deck_width, 0.04, 0.3);
   material = new THREE.MeshStandardMaterial({...metalParams});
   const board = new THREE.InstancedMesh(geometry, material, 4);
-
-  function object_update({
-    ins_obj = NaN,
-    ins_idx = NaN,
-    pos_x = NaN,
-    pos_y = NaN,
-    pos_z = NaN,
-    rot_x = NaN,
-    rot_y = NaN,
-    rot_z = NaN,
-    scale = NaN} = {}) {
-      
-      const dummy = new THREE.Object3D();
-      // 位置の更新
-      if (!Number.isNaN(pos_x)) dummy.position.x = pos_x;
-      if (!Number.isNaN(pos_y)) dummy.position.y = pos_y;
-      if (!Number.isNaN(pos_z)) dummy.position.z = pos_z;
-
-      // 回転の更新
-      if (!Number.isNaN(rot_x)) dummy.rotation.x = rot_x;
-      if (!Number.isNaN(rot_y)) dummy.rotation.y = rot_y;
-      if (!Number.isNaN(rot_z)) dummy.rotation.z = rot_z;
-
-      // スケールの更新
-      if (!Number.isNaN(scale)) dummy.scale.setScalar(scale);
-
-      dummy.updateMatrix();                       // 行列計算更新
-      ins_obj.setMatrixAt(ins_idx, dummy.matrix); // i番目のインスタンスに行列を適用
-      ins_obj.instanceMatrix.needsUpdate = true;  // 更新フラグ
-    }
 
   // 光源の追加
   function createPointLight(color = 0xffffff, intensity = 1, distance = 100, position = [0, 10, 0]) {
