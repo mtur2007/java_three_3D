@@ -91,6 +91,15 @@ function getPointByDistanceRatio(curvePoints, ratio) {
   return curvePoints[Math.min(index, totalLength - 1)];
 }
 
+function createDebugSphere(scene, position, radius = 0.1, color = 0xff0000) {
+  const geometry = new THREE.SphereGeometry(radius, 16, 16);
+  const material = new THREE.MeshBasicMaterial({ color: color });
+  const sphere = new THREE.Mesh(geometry, material);
+  sphere.position.set(position.x, position.y, position.z);
+  scene.add(sphere);
+  return sphere;  // 必要なら戻り値でMeshを返す
+}
+
 // 線路表示
 function createTrack(curve, color = 0x333333) {
   const points = curve.getPoints(100);
@@ -773,7 +782,7 @@ function getPointsEveryM(curve, interval = 25) {
 // 線路から均等に空ける関数
 function RailMargin(points, margin, angle=false){
   const edit_points = structuredClone(points); // 深いコピーを作る（破壊防止）
-  const angles = []
+  const angles_y = []
 
   for (let i = 0; i < points.length; i++){
     const rear = i > 0 ? points[i - 1] : points[i];
@@ -796,9 +805,9 @@ function RailMargin(points, margin, angle=false){
     edit_points[i].x = now.x - Math.sin(diff) * margin;
     edit_points[i].z = now.z - Math.cos(diff) * margin;
     
-    angles.push(diff)
+    angles_y.push(diff)
   }
-  if (angle){return [edit_points,angles]}else{return edit_points}
+  if (angle){return [edit_points,angles_y]}else{return edit_points}
 }
 
 // 柱
@@ -844,18 +853,152 @@ function generateBridge(curve, pillarInterval = 10, interval = 25) {
   }
 } 
 
-//  架線柱 トラス型                  ,__________|¯'¯|_______________|¯'¯|__________,
+// 縦方向の角度を求める関数
+function getVerticalAngle(p1, p2) {
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  const dz = p2.z - p1.z;
+
+  const horizontalDistance = Math.sqrt(dx * dx + dz * dz);
+  const verticalAngle = Math.atan2(dy, horizontalDistance);  // ラジアン
+
+  return verticalAngle;
+}
+
+function scaleVectors(vectors, scale = 1.0) {
+  return vectors.map(([x, y]) => [x * scale, y * scale]);
+}
+
+// 線路 ,I...I,
+function rawRail(points_data){
+  const points = points_data[0]
+  const angles = points_data[1]
+  
+  //   0123456
+  // 7 .#---#.
+  // 6 ..\./..
+  // 5 ..#.#..
+  // 4 ..|.|..
+  // 3.5  ◆
+  // 3 ..|.|..
+  // 2 ..|.|..
+  // 1 . #.#..
+  // 0 #-----#
+  const baseVectors = [
+    [  0.06,  0.175 ],
+    [ -0.06,  0.175 ],
+    [  0.05,  0.075 ],
+    [ -0.05,  0.075 ],
+    [  0.05, -0.125 ],
+    [ -0.05, -0.125 ],
+    [  0.15, -0.175 ],
+    [ -0.15, -0.175 ]
+  ];
+  
+  // 任意の倍率（例：0.5倍）
+  const scaleFactor = 0.2;
+  const scaledVectors_plane = scaleVectors(baseVectors, scaleFactor);
+  
+  const verticesArray = [];
+  const vertexArray = [];
+  
+  let before_pos = points[0]
+  for (let i = 0; i<points.length; i++){
+    
+    const pos = points[i]; //基準座標
+
+    const anglex = getVerticalAngle(before_pos, pos);
+    const angle_vertical = Math.cos(anglex)
+    const angle_plene = Math.sin(anglex)
+    // createDebugSphere(scene, pos, 0.01, 0xff0000);
+    // createDebugSphere(scene, {x:0,y:0,z:0}, 0.01, 0xff0000);
+    // 新しい座標配列（x, z の2D座標）
+    scaledVectors_plane.map((theta, c) => {
+
+      const y_new = pos.y+theta[1] * angle_vertical -0.85;
+      let z_new = theta[1] * angle_plene
+      let x_new = theta[0]
+
+      // console.log(angles[i])
+      const rotation_y = Math.atan2(z_new,x_new)+angles[i]// + i*90 * Math.PI / 180;
+      const length = Math.sqrt(x_new**2 + z_new**2)
+      x_new = pos.x+Math.sin(rotation_y)*length
+      z_new = pos.z+Math.cos(rotation_y)*length
+
+      const debugPos = { x: x_new, y: y_new, z: z_new };
+      // createDebugSphere(scene, debugPos, 0.005, 0x00ff00);
+
+      verticesArray.push(x_new, y_new, z_new);
+    });
+    if (i>1){
+      vertexArray.push((i-1)*8,(i-1)*8+1,i*8)
+      vertexArray.push((i-1)*8+1,i*8+1,i*8)
+
+      vertexArray.push(i*8+1,(i-1)*8+3,(i-1)*8+1)
+      vertexArray.push(i*8+1,i*8+3,(i-1)*8+3)
+
+      vertexArray.push(i*8+3,(i-1)*8+5,(i-1)*8+3)
+      vertexArray.push(i*8+3,i*8+5,(i-1)*8+5)
+
+      vertexArray.push((i-1)*8+5,(i-1)*8+7,i*8+5)
+      vertexArray.push((i-1)*8+7,i*8+7,i*8+5)
+
+      // -----------------------------------------
+
+      vertexArray.push((i-1)*8+2,(i-1)*8+4,i*8+2)
+      vertexArray.push((i-1)*8+4,i*8+4,i*8+2)
+
+      vertexArray.push((i-1)*8+4,(i-1)*8+6,i*8+4)
+      vertexArray.push((i-1)*8+6,i*8+6,i*8+4)
+
+      vertexArray.push((i-1)*8,(i-1)*8+2,i*8)
+      vertexArray.push((i-1)*8+2,i*8+2,i*8)
+
+    }
+    // console.log(rotatedPositions);
+    before_pos = pos
+  }
+
+  // 最後にFloat32Arrayに変換
+  const vertices = new Float32Array(verticesArray);
+  
+  // BufferGeometryにセット
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+
+  geometry.setIndex(vertexArray); // 2枚の三角形で四角形に
+  geometry.computeVertexNormals(); // 光の当たり具合を正しくする
+  
+
+  const material = new THREE.MeshStandardMaterial({ color: 0x554433, side: THREE.DoubleSide });
+  const mesh = new THREE.Mesh(geometry, material);
+  scene.add(mesh);
+
+}
+
+
+function createRail(curve, interval){
+  const board_length_1 = curve.getLength(curve)/interval;
+  const points_right = RailMargin(getPointsEveryM(curve, board_length_1), 0.3,true);
+  const points_lift = RailMargin(getPointsEveryM(curve, board_length_1), -0.3,true);
+
+  rawRail(points_right)
+  rawRail(points_lift)
+  
+}
+
+// 架線柱 トラス型                   ,__________|¯'¯|_______________|¯'¯|__________,
 function createCatenaryPole(left_height, right_height, beamLength, beam_height, makes) {
   const pos_x = 0 //　             |_|_/_\_/_\_|_|_/_\_/_\_/_\_/_\_|_|_/_\_/_\_|_|
   const pos_y = 0 //　             |X|/      ___|___             ___|___      \|X|
   const pos_z = 0 //　             |X|        ¯¯¥¯¯               ¯¯¥¯¯        |X|
   const Poles = new THREE.Group(); // 　　　 　　　　                            |X|
-  const Side_len = 0.15 //　       |X|                                         |X|
-  const board_rotation = 40 * Math.PI / 180; // /_ 45度  　　　                 |X|
+  const Side_len = 0.1 //　        |X|                                         |X|
+  const board_rotation = 45 * Math.PI / 180; // /_ 45度  　　　                 |X|
   //　                             |X|__,I,,,I,__,I,,,I,_____,I,,,I,__,I,,,I,__|X|
-  const rotation_x_len = Math.sin(board_rotation)*Side_len*0.5
+  const rotation_x_len = Math.sin(board_rotation)*Side_len*0.8
   const board_xlen = (Side_len/rotation_x_len)*rotation_x_len+rotation_x_len
-  const boardGeometry = new THREE.BoxGeometry(board_xlen, 0.03, 0.01);
+  const boardGeometry = new THREE.BoxGeometry(board_xlen, 0.02, 0.01);
   const poleMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
   const board = new THREE.InstancedMesh(boardGeometry, poleMaterial, ((right_height/Side_len)*4+(left_height/Side_len)*4+(beamLength/Side_len)*4));
 
@@ -882,7 +1025,7 @@ function createCatenaryPole(left_height, right_height, beamLength, beam_height, 
       }
       
     }
-    const poleGeometry_right = new THREE.BoxGeometry(0.03, right_height, 0.03);
+    const poleGeometry_right = new THREE.BoxGeometry(0.02, right_height, 0.02);
     const pole_right = new THREE.Mesh(poleGeometry_right, poleMaterial);
     pole_right.position.set(pos_x+Side_len*0.5,pos_y+right_height*0.5,pos_z+Side_len*0.5)
     Pole.add(pole_right.clone());
@@ -911,7 +1054,7 @@ function createCatenaryPole(left_height, right_height, beamLength, beam_height, 
         object_update({ins_obj: board, ins_idx: plus_index+i*4+3, pos_x: pos_x-Side_len*0.5+move_x,  pos_y: pos_y+Side_len*i+Side_len*0.5, pos_z: pos_z, rot_x: NaN, rot_y: 270 * Math.PI / 180, rot_z: -board_rotation,scale: NaN}) 
       }
     }
-    const poleGeometry_left = new THREE.BoxGeometry(0.03, left_height, 0.03);
+    const poleGeometry_left = new THREE.BoxGeometry(0.02, left_height, 0.02);
     const pole_left = new THREE.Mesh(poleGeometry_left, poleMaterial);
     pole_left.position.set(pos_x+Side_len*0.5+move_x,pos_y+left_height*0.5,pos_z+Side_len*0.5)
     Pole.add(pole_left.clone());
@@ -941,7 +1084,7 @@ function createCatenaryPole(left_height, right_height, beamLength, beam_height, 
     }
   }
 
-  const poleGeometry_beam = new THREE.BoxGeometry(beamLength, 0.03, 0.03);
+  const poleGeometry_beam = new THREE.BoxGeometry(beamLength, 0.02, 0.02);
   const pole_beam = new THREE.Mesh(poleGeometry_beam, poleMaterial);
   pole_beam.position.set(beamLength*0.5-Side_len*0.5,beam_height-Side_len,Side_len*0.5)
   Pole.add(pole_beam.clone());
@@ -1908,7 +2051,6 @@ const line_2 = new THREE.CatmullRomCurve3(Points_1);
 const line_3 = new THREE.CatmullRomCurve3(Points_2);
 const line_4 = new THREE.CatmullRomCurve3(Points_3);
 
-
 function sliceCurvePoints(curve, startRatio, endRatio, resolution = 1000) {
   const points = curve.getPoints(resolution);
   const startIndex = Math.floor(startRatio * points.length);
@@ -1938,6 +2080,12 @@ generateBridge(line_1, 10, interval);
 generateBridge(line_2, 10, interval);
 generateBridge(line_3, 10, interval);
 generateBridge(line_4, 10, interval);
+
+// 線路生成
+createRail(line_1, 60)
+createRail(line_2, 60)
+createRail(line_3, 60)
+createRail(line_4, 60)
 
 // 駅(プラットホーム)を生成
 createStation(track1,track2,200,y,0.7, '|[]|') // 島式 |[]| : 相対式 []||[]
@@ -2021,7 +2169,7 @@ for(let i=0; i < points_1.length-1; i++){
 const point_data = RailMargin(getPointsEveryM(wall_track4, 8), 1, true);
 const pole_line = point_data[0]
 const pole_angle = point_data[1]
-console.log(pole_line.length)
+
 // right_height, left_height, beamLength, beam_height
 const Poles = createCatenaryPole(0,3.2,1.4,2.3, 5)
 for(let i=0; i<Poles.children.length; i++){
@@ -2034,7 +2182,7 @@ const poletrak = sliceCurvePoints(line_3, 0, 0.7);
 const point_data2 = RailMargin(getPointsEveryM(poletrak, 8), 1, true);
 const pole_line2 = point_data2[0]
 const pole_angle2 = point_data2[1]
-console.log(pole_line2.length)
+
 // right_height, left_height, beamLength, beam_height
 const Poles2 = createCatenaryPole(2.8,2.8,3.5,2.3, 13)
 for(let i=0; i<Poles2.children.length; i++){
