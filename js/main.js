@@ -887,16 +887,16 @@ function rawRail(points_data){
   const baseVectors = [
     [  0.06,  0.175 ],
     [ -0.06,  0.175 ],
-    [  0.05,  0.075 ],
-    [ -0.05,  0.075 ],
-    [  0.05, -0.125 ],
-    [ -0.05, -0.125 ],
+    [  0.02,  0.075 ],
+    [ -0.02,  0.075 ],
+    [  0.02, -0.125 ],
+    [ -0.02, -0.125 ],
     [  0.15, -0.175 ],
     [ -0.15, -0.175 ]
   ];
   
   // 任意の倍率（例：0.5倍）
-  const scaleFactor = 0.2;
+  const scaleFactor = 0.25;
   const scaledVectors_plane = scaleVectors(baseVectors, scaleFactor);
   
   const verticesArray = [];
@@ -915,7 +915,7 @@ function rawRail(points_data){
     // 新しい座標配列（x, z の2D座標）
     scaledVectors_plane.map((theta, c) => {
 
-      const y_new = pos.y+theta[1] * angle_vertical -0.85;
+      const y_new = pos.y+theta[1] * angle_vertical -0.83;
       let z_new = theta[1] * angle_plene
       let x_new = theta[0]
 
@@ -931,28 +931,76 @@ function rawRail(points_data){
       verticesArray.push(x_new, y_new, z_new);
     });
     if (i>1){
+      // vertexArray.push((i-1)*8,(i-1)*8+1,i*8)
+      // vertexArray.push((i-1)*8+1,i*8+1,i*8)
+
+      // vertexArray.push(i*8+1,(i-1)*8+3,(i-1)*8+1)
+      // vertexArray.push(i*8+1,i*8+3,(i-1)*8+3)
+
+      // vertexArray.push(i*8+3,(i-1)*8+5,(i-1)*8+3)
+      // vertexArray.push(i*8+3,i*8+5,(i-1)*8+5)
+
+      // vertexArray.push((i-1)*8+5,(i-1)*8+7,i*8+5)
+      // vertexArray.push((i-1)*8+7,i*8+7,i*8+5)
+
+      // // -----------------------------------------
+
+      // vertexArray.push((i-1)*8+2,(i-1)*8+4,i*8+2)
+      // vertexArray.push((i-1)*8+4,i*8+4,i*8+2)
+
+      // vertexArray.push((i-1)*8+4,(i-1)*8+6,i*8+4)
+      // vertexArray.push((i-1)*8+6,i*8+6,i*8+4)
+
+      // vertexArray.push((i-1)*8,(i-1)*8+2,i*8)
+      // vertexArray.push((i-1)*8+2,i*8+2,i*8)
+      // =========================================
+      // vertexArray.push(i*8,(i-1)*8+1,(i-1)*8)
+      // vertexArray.push(i*8,i*8+1,(i-1)*8+1)
+
+      // vertexArray.push(i*8+1,(i-1)*8+3,(i-1)*8+1)
+      // vertexArray.push(i*8+1,i*8+3,(i-1)*8+3)
+
+      // vertexArray.push(i*8+3,(i-1)*8+5,(i-1)*8+3)
+      // vertexArray.push(i*8+3,i*8+5,(i-1)*8+5)
+
+      // vertexArray.push((i-1)*8+5,(i-1)*8+7,i*8+5)
+      // vertexArray.push((i-1)*8+7,i*8+7,i*8+5)
+
+      // // -----------------------------------------
+
+      // vertexArray.push((i-1)*8+2,(i-1)*8+4,i*8+2)
+      // vertexArray.push((i-1)*8+4,i*8+4,i*8+2)
+
+      // vertexArray.push((i-1)*8+4,(i-1)*8+6,i*8+4)
+      // vertexArray.push((i-1)*8+6,i*8+6,i*8+4)
+
+      // vertexArray.push((i-1)*8,(i-1)*8+2,i*8)
+      // vertexArray.push((i-1)*8+2,i*8+2,i*8)
+
+      // =========================================
+
       vertexArray.push((i-1)*8,(i-1)*8+1,i*8)
       vertexArray.push((i-1)*8+1,i*8+1,i*8)
 
-      vertexArray.push(i*8+1,(i-1)*8+3,(i-1)*8+1)
-      vertexArray.push(i*8+1,i*8+3,(i-1)*8+3)
+      vertexArray.push((i-1)*8+1,(i-1)*8+3,i*8+1)
+      vertexArray.push((i-1)*8+3,i*8+3,i*8+1)
 
-      vertexArray.push(i*8+3,(i-1)*8+5,(i-1)*8+3)
-      vertexArray.push(i*8+3,i*8+5,(i-1)*8+5)
+      vertexArray.push((i-1)*8+3,(i-1)*8+5,i*8+3)
+      vertexArray.push((i-1)*8+5,i*8+5,i*8+3)
 
       vertexArray.push((i-1)*8+5,(i-1)*8+7,i*8+5)
       vertexArray.push((i-1)*8+7,i*8+7,i*8+5)
 
       // -----------------------------------------
 
-      vertexArray.push((i-1)*8+2,(i-1)*8+4,i*8+2)
-      vertexArray.push((i-1)*8+4,i*8+4,i*8+2)
+      vertexArray.push((i-1)*8+4,(i-1)*8+2,i*8+2)
+      vertexArray.push(i*8+2,i*8+4,(i-1)*8+4)
 
-      vertexArray.push((i-1)*8+4,(i-1)*8+6,i*8+4)
-      vertexArray.push((i-1)*8+6,i*8+6,i*8+4)
+      vertexArray.push(i*8+4,(i-1)*8+6,(i-1)*8+4)
+      vertexArray.push(i*8+4,i*8+6,(i-1)*8+6)
 
-      vertexArray.push((i-1)*8,(i-1)*8+2,i*8)
-      vertexArray.push((i-1)*8+2,i*8+2,i*8)
+      vertexArray.push(i*8,(i-1)*8+2,(i-1)*8)
+      vertexArray.push(i*8,i*8+2,(i-1)*8+2)
 
     }
     // console.log(rotatedPositions);
@@ -969,8 +1017,12 @@ function rawRail(points_data){
   geometry.setIndex(vertexArray); // 2枚の三角形で四角形に
   geometry.computeVertexNormals(); // 光の当たり具合を正しくする
   
-
-  const material = new THREE.MeshStandardMaterial({ color: 0x554433, side: THREE.DoubleSide });
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x704513,
+    metalness: 1,   // 金属っぽさ（0〜1）
+    roughness: 0.3,   // 表面の粗さ（0：つるつる、1：ザラザラ）
+    side: THREE.FrontSide
+  });
   const mesh = new THREE.Mesh(geometry, material);
   scene.add(mesh);
 
@@ -979,8 +1031,40 @@ function rawRail(points_data){
 
 function createRail(curve, interval){
   const board_length_1 = curve.getLength(curve)/interval;
-  const points_right = RailMargin(getPointsEveryM(curve, board_length_1), 0.3,true);
-  const points_lift = RailMargin(getPointsEveryM(curve, board_length_1), -0.3,true);
+  const points_right = RailMargin(getPointsEveryM(curve, board_length_1), 0.24,true);
+  const points_lift = RailMargin(getPointsEveryM(curve, board_length_1), -0.24,true);
+  const points_center = RailMargin(getPointsEveryM(curve, 0.3), 0,true);
+  const points = points_center[0]
+  const angles = points_center[1]
+
+  const geometry = new THREE.BoxGeometry(0.09, 0.05, 0.89);
+  const stoneMaterial = new THREE.MeshStandardMaterial({
+    color: 0x676767,     // 石っぽいグレー（DimGray）
+    roughness: 0.9,      // 表面ザラザラ（石っぽさを出す）
+    metalness: 0.0,      // 金属感なし
+  });
+  const loc_geometry = new THREE.BoxGeometry(0.05, 0.02, 0.1);
+  const loc_material = new THREE.MeshStandardMaterial({
+    color: 0x774513,
+    metalness: 1,   // 金属っぽさ（0〜1）
+    roughness: 0.5,   // 表面の粗さ（0：つるつる、1：ザラザラ）
+    side: THREE.FrontSide
+  });
+
+  console.log(points.length)
+  const sleeper = new THREE.InstancedMesh(geometry, stoneMaterial, points.length);
+  const loc = new THREE.InstancedMesh(loc_geometry, loc_material, points.length*2);
+  for(let i = 0; i<points.length; i++){
+    const pos = points[i]
+    object_update({ins_obj: sleeper, ins_idx: i, pos_x: pos.x,  pos_y: pos.y-0.9, pos_z: pos.z, rot_x: NaN, rot_y: angles[i], rot_z: NaN,scale: NaN})
+    const x_sin = Math.sin(angles[i])
+    const z_cos = Math.cos(angles[i])
+    object_update({ins_obj: loc, ins_idx: i*2, pos_x: pos.x+x_sin*0.245,  pos_y: pos.y-0.86, pos_z: pos.z+z_cos*0.21, rot_x: NaN, rot_y: angles[i], rot_z: NaN,scale: NaN})
+    object_update({ins_obj: loc, ins_idx: i*2+1, pos_x: pos.x+x_sin*-0.245,  pos_y: pos.y-0.86, pos_z: pos.z+z_cos*-0.21, rot_x: NaN, rot_y: angles[i], rot_z: NaN,scale: NaN})
+
+  }
+  scene.add(sleeper)
+  scene.add(loc)
 
   rawRail(points_right)
   rawRail(points_lift)
@@ -2392,9 +2476,9 @@ async function startQuadrupleCrossDemo() {
 }
 
 document.getElementById("toggle-crossover").addEventListener("click", () => {
-  camera.position.set(-5, 7, -70);
+  camera.position.set(-5, 8, -60);
   cameraAngleX = 0.1
-  cameraAngleY = 2.5;
+  cameraAngleY = 2.3;
 
   startQuadrupleCrossDemo();  // ← ここで関数を呼び出す
 });
