@@ -1,16 +1,109 @@
 // --- 基本設定 ---
-
 const scene = new THREE.Scene();
 
+// 昼の環境マップ（初期）
 const envMap = new THREE.CubeTextureLoader()
   .setPath('https://threejs.org/examples/textures/cube/Bridge2/')
   .load([
     'posx.jpg','negx.jpg',
     'posy.jpg','negy.jpg',
     'posz.jpg','negz.jpg'
-  ]);
-scene.environment = envMap;
-scene.background = envMap;
+  ], (texture) => {
+    texture.colorSpace = THREE.SRGBColorSpace;
+    scene.environment = texture;
+    scene.background = texture;
+  });
+
+// --- GridHelper 追加（初回のみ） ---
+const grid = new THREE.GridHelper(200, 80);
+grid.name = "Grid";
+scene.add(grid);
+
+// --- ライト追加（初回のみ） ---
+const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+scene.add(ambient);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+dirLight.position.set(0, 20, 0);
+dirLight.name = "SunLight";
+scene.add(dirLight);
+
+// --- 昼夜切替 ---
+let isNight = false;
+let envMapNight = null;
+
+const toggleBtn = document.getElementById("toggle-daynight");
+
+toggleBtn.addEventListener("click", () => {
+  isNight = !isNight;
+
+  if (isNight) {
+    // 🌙 夜モード
+    if (envMapNight) {
+      scene.background = envMapNight;
+      scene.environment = envMapNight;
+    } else {
+      const loader = new THREE.TextureLoader();
+      loader.load('textures/shanghai_bund_4k.jpg', (texture) => {
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        texture.colorSpace = THREE.SRGBColorSpace;
+        scene.background = texture;
+        scene.environment = texture;
+        envMapNight = texture;
+      });
+    }
+
+    grid.visible = false;
+    dirLight.visible = false;
+    ambient.visible = false;
+
+    renderer.toneMappingExposure = 1.0;
+    toggleBtn.textContent = "☀️ 昼にする";
+
+  } else {
+    // ☀️ 昼モード
+    scene.background = envMap;
+    scene.environment = envMap;
+
+    grid.visible = true;
+    dirLight.visible = true;
+    ambient.visible = true;
+
+    renderer.toneMappingExposure = 2.5;
+    toggleBtn.textContent = "🌙 夜にする";
+  }
+});
+
+
+// if (true){
+//   const loader = new THREE.TextureLoader();
+
+//   loader.load('textures/shanghai_bund_4k.jpg', (texture) => {
+//     texture.mapping = THREE.EquirectangularReflectionMapping;
+//     texture.colorSpace = THREE.SRGBColorSpace; // ←ここを修正
+//     scene.background = texture;     // 背景用（オプション）
+//     scene.environment = texture;    // マテリアルの環境反射に使用
+//   });
+// } else {
+//   const envMap = new THREE.CubeTextureLoader()
+//     .setPath('https://threejs.org/examples/textures/cube/Bridge2/')
+//     .load([
+//       'posx.jpg','negx.jpg',
+//       'posy.jpg','negy.jpg',
+//       'posz.jpg','negz.jpg'
+//     ]);
+//   scene.environment = envMap;
+//   scene.background = envMap;
+
+//   scene.add(new THREE.GridHelper(200, 80));
+//   scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+
+//   const light = new THREE.DirectionalLight(0xffffff, 1);
+//   light.position.set(0, 20, 0);
+//   scene.add(light);
+
+// };
+
 
 const camera = new THREE.PerspectiveCamera(
   75, window.innerWidth / window.innerHeight, 0.1, 1000
@@ -23,13 +116,6 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 
 document.body.appendChild(renderer.domElement);
-
-scene.add(new THREE.GridHelper(200, 80));
-scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-
-const light = new THREE.DirectionalLight(0xffffff, 0.8);
-light.position.set(20, 30, 10);
-scene.add(light);
 
 let run_STOP = false
 let quattro = 0
@@ -885,14 +971,14 @@ function rawRail(points_data){
   // 1 . #.#..
   // 0 #-----#
   const baseVectors = [
-    [  0.06,  0.175 ],
-    [ -0.06,  0.175 ],
+    [  0.07,  0.175 ],
+    [ -0.07,  0.175 ],
     [  0.02,  0.075 ],
     [ -0.02,  0.075 ],
     [  0.02, -0.125 ],
     [ -0.02, -0.125 ],
-    [  0.15, -0.175 ],
-    [ -0.15, -0.175 ]
+    [  0.14, -0.15 ],
+    [ -0.14, -0.15 ]
   ];
   
   // 任意の倍率（例：0.5倍）
@@ -1018,9 +1104,10 @@ function rawRail(points_data){
   geometry.computeVertexNormals(); // 光の当たり具合を正しくする
   
   const material = new THREE.MeshStandardMaterial({
-    color: 0x704513,
+    color: 0x603513,
     metalness: 1,   // 金属っぽさ（0〜1）
     roughness: 0.3,   // 表面の粗さ（0：つるつる、1：ザラザラ）
+    envMapIntensity: 3,    // 環境マップの反射強度（envMapを使うなら）
     side: THREE.FrontSide
   });
   const mesh = new THREE.Mesh(geometry, material);
@@ -1036,11 +1123,12 @@ function createRail(curve, interval){
   const points = points_center[0]
   const angles = points_center[1]
 
-  const geometry = new THREE.BoxGeometry(0.09, 0.05, 0.89);
+  const geometry = new THREE.BoxGeometry(0.12, 0.05, 0.95);
   const stoneMaterial = new THREE.MeshStandardMaterial({
     color: 0x676767,     // 石っぽいグレー（DimGray）
     roughness: 0.9,      // 表面ザラザラ（石っぽさを出す）
     metalness: 0.0,      // 金属感なし
+    side: THREE.FrontSide
   });
   const loc_geometry = new THREE.BoxGeometry(0.05, 0.02, 0.1);
   const loc_material = new THREE.MeshStandardMaterial({
@@ -1081,7 +1169,13 @@ function createCatenaryPole(left_height, right_height, beamLength, beam_height, 
   const rotation_x_len = Math.sin(board_rotation)*Side_len*0.8
   const board_xlen = (Side_len/rotation_x_len)*rotation_x_len+rotation_x_len
   const boardGeometry = new THREE.BoxGeometry(board_xlen, 0.02, 0.01);
-  const poleMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
+  const poleMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0xaaaaaa,
+    metalness: 1,   // 金属っぽさ（0〜1）
+    roughness: 0.6,   // 表面の粗さ（0：つるつる、1：ザラザラ）
+    envMapIntensity: 1,    // 環境マップの反射強度（envMapを使うなら）
+    side: THREE.FrontSide
+   });
   const board = new THREE.InstancedMesh(boardGeometry, poleMaterial, ((right_height/Side_len)*4+(left_height/Side_len)*4+(beamLength/Side_len)*4));
 
   right_height = right_height-right_height%Side_len
@@ -1188,13 +1282,12 @@ function createCatenaryPole(left_height, right_height, beamLength, beam_height, 
 
 
 // 壁の生成
-function createWall(track_1,track_2,quantity,margin_1=0.8,margin_2=-0.8,y_1=0,y_2=0){
-  
+function createWall(track_1,track_2,quantity,margin_1=0.8,margin_2=-0.8,y_1=0,y_2=0,color=0x666666,material=false){
   const board_length_1 = track_1.getLength(track_1)/quantity;
   const board_length_2 = track_2.getLength(track_2)/quantity;
   const points_1 = RailMargin(getPointsEveryM(track_1, board_length_1), margin_1);
   const points_2 = RailMargin(getPointsEveryM(track_2, board_length_2), margin_2);
-
+  
   const verticesArray = [];
   const vertexArray = [];
 
@@ -1204,7 +1297,8 @@ function createWall(track_1,track_2,quantity,margin_1=0.8,margin_2=-0.8,y_1=0,y_
     const coordinate2 = points_2[i]
     verticesArray.push(coordinate2.x, coordinate2.y+y_2, coordinate2.z)
     if (i < points_1.length-2){
-      if (i%2 === 0){vertexArray.push(i,i+1,i+2)}else{vertexArray.push(i+2,i+1,i)};
+      vertexArray.push(i*2,i*2+1,i*2+2);
+      vertexArray.push(i*2+3,i*2+2,i*2+1);
     }
   }
 
@@ -1218,8 +1312,7 @@ function createWall(track_1,track_2,quantity,margin_1=0.8,margin_2=-0.8,y_1=0,y_
   geometry.setIndex(vertexArray); // 2枚の三角形で四角形に
   geometry.computeVertexNormals(); // 光の当たり具合を正しくする
   
-
-  const material = new THREE.MeshStandardMaterial({ color: 0x666666, side: THREE.DoubleSide });
+  if (material === false){material =  new THREE.MeshStandardMaterial({ color: color, side: THREE.DoubleSide })};
   const mesh = new THREE.Mesh(geometry, material);
   scene.add(mesh);
   
@@ -1301,7 +1394,7 @@ function createStation(track_1,track_2,delicacy,y,margin,a){
     ];
     
     const geometry = new THREE.ExtrudeGeometry(shape, { depth: 0.2, bevelEnabled: false });
-    const material = new THREE.MeshBasicMaterial({ color: 0x869989 });
+    const material = new THREE.MeshBasicMaterial({ color: 0x869989, side: THREE.FrontSide });
     const mesh = new THREE.Mesh(geometry, materials);
 
     mesh.rotation.x = 90 * Math.PI / 180;
@@ -1531,7 +1624,7 @@ function placeTrainDoors(centerX, centerY, centerZ, angle, track_doors, totalLen
     metalness: 0.3,
     roughness: 0.15,
     envMapIntensity: 1.0,
-    side: THREE.DoubleSide, // 念のため両面表示 
+    side: THREE.FrontSide
   });
 
   for (let i = 0; i < doorCount; i++) {
@@ -1801,6 +1894,24 @@ function TrainSettings(
     const spacing = 6.95; // 車両の長さと同じだけ間隔を空ける
     car.position.z = - i * spacing;
 
+    if (i === 0){
+      const headlight = new THREE.SpotLight(0xffffff, 15);
+      headlight.angle = Math.PI / 15;
+      headlight.penumbra = 0.2;
+      headlight.distance = 10;
+      headlight.decay = 1;
+      headlight.castShadow = false;
+
+      headlight.position.set(0, -0.3, -1);  // 先頭部に合わせて調整（電車前方向に）
+      car.add(headlight);
+      car.add(headlight.target);   // スポットライトはtargetが必須
+      headlight.target.position.set(0, 0, 4);  // 向き（車両前方）に合わせて調整
+      
+      // const hemiLight = new THREE.PointLight(0xffffbb,  5, 1.5);
+      // hemiLight.position.set(0, 0.5, 0);
+      // car.add(hemiLight);
+    } 
+    
     // ▼ パンタグラフ設置（例: 1, 4, 7 両目など）
     if (i % 3 === 1) {
       const pantograph = createPantograph(Math.PI / 2.7);
@@ -1911,11 +2022,12 @@ async function runTrain(trainCars, root, track_doors, door_interval, max_speed=0
 
   run_num += 1
 
+  const front_right = trainCars.userData.cars[0].children[0]
+
   // ランダムな秒数（1000〜5000ミリ秒）
   await sleep( 1000 + Math.random() * 15000);
- 
   trainCars.visible = true;   // 再表示する
-  
+
   async function runCar() {
     if (t >= 1 + maxOffsetT) {
       
@@ -1951,6 +2063,14 @@ async function runTrain(trainCars, root, track_doors, door_interval, max_speed=0
       
         Pos = Equal_root[safeIndex];
         Tan = Equal_root[safeIndex+1].clone().sub(Pos).normalize();
+        
+        if (i === 0 & isNight){
+          if (Pos.z >= -20) {
+            front_right.visible = false;
+          } else {
+            front_right.visible = true;
+          }
+        } else if (!isNight) {front_right.visible = false}
       
         car = trainCars.userData.cars[i]; // ← ここだけ変わる
         car.position.copy(Pos);
@@ -2086,7 +2206,7 @@ Points_1 = [
   new THREE.Vector3(0.8, y, 50),
   new THREE.Vector3(-2, y, 90),
 ];
-Map_pin(12-0.5, -80.5)
+
 // --- JR総武線 track3 ---
 Points_2 = [
 
@@ -2124,8 +2244,6 @@ Points_3 = [
   new THREE.Vector3(-4.8, y, 40),
   new THREE.Vector3(-9, y, 90),
 ];
-
-Map_pin(-8, -20)
 
 // 指定したポイントから線(線路の軌道)を生成
 const line_1 = new THREE.CatmullRomCurve3(Points_0);
@@ -2196,8 +2314,8 @@ const track3_doors = placePlatformDoors(track3, 0.9, door_interval, 'left');  //
 const track4_doors = placePlatformDoors(track4, 0.9, door_interval, 'right');  // 左側に設置
 
 // 壁の生成
-const wall_start = 0.25;
-const wall_end = 0.7;
+const wall_start = 0.24;
+const wall_end = 0.42;
 const wall_track1 = sliceCurvePoints(line_1, wall_start, wall_end);
 const wall_track2 = sliceCurvePoints(line_2, wall_start, wall_end);
 createWall(wall_track1,wall_track2,40,0.8,-0.8,-0.9,-0.9)
@@ -2214,14 +2332,26 @@ const tunnel_1 = sliceCurvePoints(line_4, tunnel_start, tunnel_end);
 const tunnel_2 = sliceCurvePoints(line_4, tunnel_start, tunnel_end);
 const quantity = 3
 
+createWall(tunnel_1,tunnel_1,40,-0.9,-0.9,-1,1.5)
+createWall(tunnel_1,tunnel_1,40,0.9,0.9,-1,1.5)
+
+createWall(line_4,line_4,40,0.885,2,-0.95,-5)
+createWall(line_4,line_4,40,10,10,-5,-2.5)
+createWall(line_4,line_4,40,10,30,-2.5,-2.5)
+
+const water_material = new THREE.MeshStandardMaterial({
+  color: 0x005555,         // 白ベース
+  metalness: 0.3,          // 完全な金属
+  roughness: 0,          // 少しザラつき（0.0だと鏡面すぎる）
+  envMapIntensity: 1,    // 環境マップの反射強度（あるとリアル）
+  side: THREE.DoubleSide   // 両面描画（必要なら）
+});
+createWall(line_4,line_4,40,2,10,-5,-5,0x003355,water_material)
+
 const board_length_1 = tunnel_1.getLength(line_4)/quantity;
 const board_length_2 = tunnel_2.getLength(line_4)/quantity;
 const points_1 = RailMargin(getPointsEveryM(tunnel_1, board_length_1), 1);
 const points_2 = RailMargin(getPointsEveryM(tunnel_2, board_length_2), -1);
-
-createWall(tunnel_1,tunnel_1,40,-0.9,-0.9,-1,1.5)
-createWall(tunnel_1,tunnel_1,40,0.9,0.9,-1,1.5)
-
 
 for(let i=0; i < points_1.length-1; i++){
   const coordinate1 = points_1[i]
@@ -2276,7 +2406,7 @@ scene.add(Poles2)
 // 電車の運行
 // const max_speed = 0.001 // 制限速度(最高)
 // const add_speed = 0.0000010 // 追加速度(加速/減速)
-const max_speed = 0.0005 // 制限速度(最高)
+const max_speed = 0.0004 // 制限速度(最高)
 const add_speed = 0.000001 // 追加速度(加速/減速)
 
 const exhibition_tyuou = TrainSettings(
@@ -2474,9 +2604,9 @@ async function startQuadrupleCrossDemo() {
 }
 
 document.getElementById("toggle-crossover").addEventListener("click", () => {
-  camera.position.set(-5, 8, -60);
-  cameraAngleX = 0.1
-  cameraAngleY = 2.3;
+  // camera.position.set(-5, 8, -60);
+  // cameraAngleX = 0.1
+  // cameraAngleY = 2.3;
 
   startQuadrupleCrossDemo();  // ← ここで関数を呼び出す
 });
@@ -2739,7 +2869,7 @@ if (true) {
     metalness: 0.3,       // 金属光沢最大
     roughness: 0.25,      // 少しザラザラ（低くするとツルツル）
     envMapIntensity: 1.0,    // 環境マップの反射強度（envMapを使うなら）
-    side: THREE.DoubleSide,
+    side: THREE.FrontSide,
   };
 
   // 鉄のような金属マテリアル設定
@@ -2748,7 +2878,7 @@ if (true) {
     metalness: 0.5,       // 金属光沢最大
     roughness: 0.0,       // 少しザラザラ（低くするとツルツル）
     envMapIntensity: 1.0,    // 環境マップの反射強度（envMapを使うなら）
-    side: THREE.DoubleSide,
+    side: THREE.FrontSide,
   };
 
   // 1. 天井本体（Mesh）
@@ -2856,10 +2986,10 @@ if (true) {
     object_update({ins_obj: ceiling,  ins_idx: i, pos_x: 0.5, pos_y: beam_y-0.5, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*ceiling_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
     object_update({ins_obj: cylinder, ins_idx: i*2, pos_x: 2.8, pos_y: beam_y-1.5, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*ceiling_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
     object_update({ins_obj: cylinder, ins_idx: i*2+1, pos_x: -2.9, pos_y: beam_y-1.5, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*ceiling_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    createPointLight(0xffffff, 2, 10, [2.55, beam_y-1.05, beam_z-Podium_deck_start+ beam_Spacing/2*3 - ceiling_Spacing/4 + Light_Spot_margin + i*ceiling_Spacing]);
-    createPointLight(0xffffff, 2, 10, [2.55, beam_y-1.05, beam_z-Podium_deck_start+ beam_Spacing/2*3 - ceiling_Spacing/4 + Light_Spot_margin*2 + i*ceiling_Spacing]);
-    createPointLight(0xffffff, 2, 10, [-2.9, beam_y-1.05, beam_z-Podium_deck_start+ beam_Spacing/2*3 - ceiling_Spacing/4 + Light_Spot_margin + i*ceiling_Spacing]);
-    createPointLight(0xffffff, 2, 10, [-2.9, beam_y-1.05, beam_z-Podium_deck_start+ beam_Spacing/2*3 - ceiling_Spacing/4 + Light_Spot_margin*2 + i*ceiling_Spacing]);
+    createPointLight(0xffffff, 10, 10, [2.55, beam_y-1.05, beam_z-Podium_deck_start+ beam_Spacing/2*3 - ceiling_Spacing/4 + Light_Spot_margin + i*ceiling_Spacing]);
+    createPointLight(0xffffff, 10, 10, [2.55, beam_y-1.05, beam_z-Podium_deck_start+ beam_Spacing/2*3 - ceiling_Spacing/4 + Light_Spot_margin*2 + i*ceiling_Spacing]);
+    createPointLight(0xffffff, 10, 10, [-2.9, beam_y-1.05, beam_z-Podium_deck_start+ beam_Spacing/2*3 - ceiling_Spacing/4 + Light_Spot_margin + i*ceiling_Spacing]);
+    createPointLight(0xffffff, 10, 10, [-2.9, beam_y-1.05, beam_z-Podium_deck_start+ beam_Spacing/2*3 - ceiling_Spacing/4 + Light_Spot_margin*2 + i*ceiling_Spacing]);
   }
 
   for (let i = 0; i < 47; i++){
