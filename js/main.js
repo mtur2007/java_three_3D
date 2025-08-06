@@ -1030,9 +1030,8 @@ function rawRail(points_data){
 
 
 function createRail(curve, interval){
-  const board_length_1 = curve.getLength(curve)/interval;
-  const points_right = RailMargin(getPointsEveryM(curve, board_length_1), 0.24,true);
-  const points_lift = RailMargin(getPointsEveryM(curve, board_length_1), -0.24,true);
+  const points_right = RailMargin(curve.getPoints(70), 0.24,true);
+  const points_lift = RailMargin(curve.getPoints(70), -0.24,true);
   const points_center = RailMargin(getPointsEveryM(curve, 0.3), 0,true);
   const points = points_center[0]
   const angles = points_center[1]
@@ -1051,7 +1050,6 @@ function createRail(curve, interval){
     side: THREE.FrontSide
   });
 
-  console.log(points.length)
   const sleeper = new THREE.InstancedMesh(geometry, stoneMaterial, points.length);
   const loc = new THREE.InstancedMesh(loc_geometry, loc_material, points.length*2);
   for(let i = 0; i<points.length; i++){
@@ -2902,4 +2900,96 @@ if (true) {
   scene.add(prop);
   scene.add(board)
 
+}
+
+// -------------------------------------------------------------------------
+cameraAngleY
+cameraAngleX
+
+// position.x, position.y, position.z で個別取得も可能
+
+let frontViewActive = false;
+let currentTrainCar = null;
+let frontViewRequestId = null;
+// 各列車の定義（先頭車両）
+const trainCars = {
+  1: Train_1.userData.cars[0],
+  2: Train_2.userData.cars[0],
+  3: Train_3.userData.cars[0],
+  4: Train_4.userData.cars[0],
+};
+
+function startFrontView(trainCar) {
+  currentTrainCar = trainCar;
+  frontViewActive = true;
+
+  function update() {
+    if (!frontViewActive || !currentTrainCar) return;
+
+    const position = new THREE.Vector3();
+    const quaternion = new THREE.Quaternion();
+    const direction = new THREE.Vector3();
+
+    currentTrainCar.getWorldPosition(position);
+    currentTrainCar.getWorldQuaternion(quaternion);
+    currentTrainCar.getWorldDirection(direction);
+
+    // オフセット（少し後ろ＆上から）
+    const offset = new THREE.Vector3(0, 0.2, 3.4);
+    offset.applyQuaternion(quaternion);
+
+    camera.position.copy(position).add(offset);
+
+    // === 🔽 Yaw / Pitch で視線方向を調整 ===
+    const yaw = Math.atan2(direction.x, direction.z);   // Y軸回転（左右）
+    const pitch = Math.asin(direction.y);               // X軸回転（上下）
+
+    // 必要な変数に代入（外部で使いたい場合）
+    cameraAngleY = yaw;
+    cameraAngleX = pitch;
+
+    camera.rotation.set(pitch, yaw, 0); // ← Three.jsは (X, Y, Z) の順です
+    // ====================================
+
+    frontViewRequestId = requestAnimationFrame(update);
+  }
+
+  update();
+}
+
+function stopFrontView() {
+  frontViewActive = false;
+  if (frontViewRequestId !== null) {
+    cancelAnimationFrame(frontViewRequestId);
+    frontViewRequestId = null;
+  }
+}
+
+const buttons = document.querySelectorAll(".frontViewBtn");
+
+buttons.forEach(button => {
+  button.addEventListener("click", () => {
+    const trainNum = parseInt(button.dataset.train);
+    const selectedCar = trainCars[trainNum];
+
+    if (!frontViewActive || currentTrainCar !== selectedCar) {
+      stopFrontView(); // 他の列車からの切り替え対応
+      startFrontView(selectedCar);
+      updateButtonLabels(trainNum);
+    } else {
+      stopFrontView();
+      updateButtonLabels(null);
+    }
+  });
+});
+
+function updateButtonLabels(activeTrainNum) {
+  buttons.forEach(button => {
+    const num = parseInt(button.dataset.train);
+    if (num === activeTrainNum) {
+      button.textContent = `${num}番線 🚫 停止`;
+    } else {
+      button.textContent = `${num}番線`;
+    }
+  });
 }
