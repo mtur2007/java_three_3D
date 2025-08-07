@@ -899,21 +899,51 @@ function RailMargin(points, margin, angle=false){
 // 柱
 function createBridgePillar(x, z, height = 5) {
   const geometry = new THREE.BoxGeometry(0.2, height-2, 0.2);
-  const material = new THREE.MeshStandardMaterial({ color: 0x555555 });
+  const material = new THREE.MeshStandardMaterial({ 
+    color: 0x555555,
+    side: THREE.FrontSide
+  });
   const pillar = new THREE.Mesh(geometry, material);
   pillar.position.set(x, height / 2, z);
   scene.add(pillar);
 }
 
-// 橋げた
-function createBridgeGirder(start, end) {
+// 橋面(高架橋の上面・床)
+function createBridgeGirder(curve) {
+  const points_center = RailMargin(getPointsEveryM(curve, 0.3), 0,true);
+  const points = points_center[0]
+  const angles = points_center[1]
+
+  const geometry = new THREE.BoxGeometry(0.12, 0.05, 0.9);
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x603513,     // 石っぽいグレー（DimGray）
+    roughness: 0.4,      // 表面ザラザラ（石っぽさを出す）
+    metalness: 0.8,      // 金属感なし
+    side: THREE.FrontSide
+  });
+
+  const sleeper = new THREE.InstancedMesh(geometry, material, points.length);
+
+  for(let i = 0; i<points.length; i++){
+    const pos = points[i]//-0.95
+    object_update({ins_obj: sleeper, ins_idx: i, pos_x: pos.x,  pos_y: pos.y-0.89, pos_z: pos.z, rot_x: NaN, rot_y: angles[i], rot_z: NaN,scale: NaN})
+  }
+  scene.add(sleeper)
+
+}
+
+// 床板(コンクリート床)
+function createDeckSlab(start, end) {
   const dx = end.x - start.x;
   const dz = end.z - start.z;
   const dy = end.y - start.y;
 
   const length = Math.sqrt(dx * dx + dz * dz);
   const geometry = new THREE.BoxGeometry(length, 0.2 ,1.75);
-  const material = new THREE.MeshStandardMaterial({ color: 0x888888 });
+  const material = new THREE.MeshStandardMaterial({ 
+    color: 0x888888,
+    side: THREE.FrontSide
+  });
   const girder = new THREE.Mesh(geometry, material);
   girder.position.set(
     (start.x + end.x) / 2,
@@ -926,7 +956,7 @@ function createBridgeGirder(start, end) {
 }
 
 // 高架線路生成(線型に沿う)
-function generateBridge(curve, pillarInterval = 10, interval = 25) {
+function generateElevated(curve, pillarInterval = 10, interval = 25) {
   const points = getPointsEveryM(curve, interval);
   for (let i = 0; i < points.length; i += pillarInterval) {
     const p = points[i];
@@ -934,7 +964,7 @@ function generateBridge(curve, pillarInterval = 10, interval = 25) {
 
     if (i + pillarInterval < points.length) {
       const p2 = points[i + pillarInterval];
-      createBridgeGirder(p, p2);
+      createDeckSlab(p, p2);
     }
   }
 } 
@@ -1125,7 +1155,7 @@ function createRail(curve, interval){
 
   const geometry = new THREE.BoxGeometry(0.12, 0.05, 0.95);
   const stoneMaterial = new THREE.MeshStandardMaterial({
-    color: 0x676767,     // 石っぽいグレー（DimGray）
+    color: 0x403020,     // 石っぽいグレー（DimGray）
     roughness: 0.9,      // 表面ザラザラ（石っぽさを出す）
     metalness: 0.0,      // 金属感なし
     side: THREE.FrontSide
@@ -2065,10 +2095,10 @@ async function runTrain(trainCars, root, track_doors, door_interval, max_speed=0
         Tan = Equal_root[safeIndex+1].clone().sub(Pos).normalize();
         
         if (i === 0 & isNight){
-          if (Pos.z >= -20) {
-            front_right.visible = false;
-          } else {
+          if (Pos.z <= -20) {
             front_right.visible = true;
+          } else {
+            front_right.visible = false;
           }
         } else if (!isNight) {front_right.visible = false}
       
@@ -2122,7 +2152,6 @@ async function runTrain(trainCars, root, track_doors, door_interval, max_speed=0
       run_num -= 1
       return
     }
-
     requestAnimationFrame(runCar);
     
   }
@@ -2194,6 +2223,8 @@ Points_0 = [
 ];
 // --- JR総武線 track2 ---
 Points_1 = [
+  
+  new THREE.Vector3(-11.3, y+2.3, -170),
 
   points[2],
   points[3],
@@ -2209,6 +2240,8 @@ Points_1 = [
 
 // --- JR総武線 track3 ---
 Points_2 = [
+
+  new THREE.Vector3(-13.3, y+2.3, -170),
 
   points[4],
   points[5],
@@ -2262,11 +2295,11 @@ function sliceCurvePoints(curve, startRatio, endRatio, resolution = 1000) {
 const start = 0.4;
 const end = 0.8;
 const track1 = sliceCurvePoints(line_1, start, end);
-const track2 = sliceCurvePoints(line_2, start, end);
-
-const track3 = sliceCurvePoints(line_3, start, end);
 const track4 = sliceCurvePoints(line_4, start, end+0.04);
-
+const start2 = 0.5;
+const end2 = 0.85;
+const track2 = sliceCurvePoints(line_2, start2, end2);
+const track3 = sliceCurvePoints(line_3, start2, end2);
 
 createTrack(line_1, 0xff0000)
 createTrack(line_2, 0x772200)
@@ -2276,10 +2309,15 @@ createTrack(line_4, 0x0000ff)
 
 // 高架(柱/床版)を生成
 const interval = 1
-generateBridge(line_1, 10, interval);
-generateBridge(line_2, 10, interval);
-generateBridge(line_3, 10, interval);
-generateBridge(line_4, 10, interval);
+const Elevated_start = 0.32
+const Elevated_end = 1
+generateElevated(line_1, 10, interval);
+generateElevated(sliceCurvePoints(line_2, Elevated_start, Elevated_end), 10, interval);
+generateElevated(sliceCurvePoints(line_3, Elevated_start+0.02, Elevated_end), 10, interval);
+generateElevated(line_4, 10, interval);
+
+createBridgeGirder(sliceCurvePoints(line_2, 0, Elevated_start), 10, interval);
+createBridgeGirder(sliceCurvePoints(line_3, 0, Elevated_start+0.02), 10, interval);
 
 // 線路生成
 createRail(line_1, 60)
@@ -2295,10 +2333,12 @@ createStation(track3,track4,200,y,0.7, '|[]|') // 島式 |[]| : 相対式 []||[]
 const roof_start = 0.4;
 const roof_end = 0.675;
 const roof_track1 = sliceCurvePoints(line_1, roof_start, roof_end);
-const roof_track2 = sliceCurvePoints(line_2, roof_start, roof_end);
+const roof_start2 = 0.5;
+const roof_end2 = 0.725;
+const roof_track2 = sliceCurvePoints(line_2, roof_start2, roof_end2);
 placePlatformRoof(roof_track1,roof_track2,y+1.4,10)
 
-const roof_track3 = sliceCurvePoints(line_3, roof_start, roof_end);
+const roof_track3 = sliceCurvePoints(line_3, roof_start2, roof_end2);
 const roof_track4 = sliceCurvePoints(line_4, roof_start, 0.6846);
 placePlatformRoof(roof_track3,roof_track4,y+1.4,10)
 
@@ -2317,9 +2357,9 @@ const track4_doors = placePlatformDoors(track4, 0.9, door_interval, 'right');  /
 const wall_start = 0.24;
 const wall_end = 0.42;
 const wall_track1 = sliceCurvePoints(line_1, wall_start, wall_end);
-const wall_track2 = sliceCurvePoints(line_2, wall_start, wall_end);
+const wall_track2 = sliceCurvePoints(line_2, 0.37, 0.5);
 createWall(wall_track1,wall_track2,40,0.8,-0.8,-0.9,-0.9)
-const wall_track3 = sliceCurvePoints(line_3, wall_start, wall_end);
+const wall_track3 = sliceCurvePoints(line_3, 0.37, 0.5);
 const wall_track4 = sliceCurvePoints(line_4, wall_start, wall_end);
 createWall(wall_track3,wall_track4,40,0.8,-0.8,-0.9,-0.9)
 
@@ -2367,7 +2407,16 @@ for(let i=0; i < points_1.length-1; i++){
   shape.lineTo(coordinate4.x, coordinate4.z);
 
   const geometry = new THREE.ExtrudeGeometry(shape, { depth: 0.4, bevelEnabled: false });
-  const material = new THREE.MeshBasicMaterial({ color: 0x333333 });
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x333333,
+    metalness: 0.5,
+    roughness: 0.9,
+    envMap: scene.environment,  // もし読み込んでるなら
+    envMapIntensity: 3,
+    side: THREE.FrontSide
+  });
+  
+  
   const mesh = new THREE.Mesh(geometry, material);
 
   mesh.rotation.x = 91.5 * Math.PI / 180;
@@ -3123,3 +3172,337 @@ function updateButtonLabels(activeTrainNum) {
     }
   });
 }
+
+const group = new THREE.Group();
+
+// 円弧Aのパラメータ
+const arcA = {
+  radius: 29,
+  rangeDeg: 65,
+  stepDeg: 16,
+  thickness: 0.4,
+  depth: 0.5,
+  color: 0x996633,
+  centerOffset: new THREE.Vector3(5, 0, 0),
+  rotationOffset: 90 * Math.PI / 180
+};
+
+// 円弧Bのパラメータ
+const arcB = {
+  radius: 25.2,
+  rangeDeg: 85,
+  stepDeg: 16,
+  thickness: 0.4,
+  depth: 0.5,
+  color: 0x336699,
+  centerOffset: new THREE.Vector3(5, 3, 0),
+  rotationOffset: 90 * Math.PI / 180
+};
+
+function createBoxBetweenPoints(x1, y1, x2, y2, thickness, depth, material) {
+  // 長さと角度
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const length = Math.sqrt(dx * dx + dy * dy);
+  const angle = Math.atan2(dy, dx);
+
+  // 中心位置
+  const centerX = (x1 + x2) / 2;
+  const centerY = (y1 + y2) / 2;
+
+  // Box Geometry（幅＝length、厚み、奥行き）
+  const geometry = new THREE.BoxGeometry(length, thickness, depth);
+  const mesh = new THREE.Mesh(geometry, material);
+
+  // 平面上での回転（Z軸回転でX-Yに合わせる）
+  mesh.rotation.z = angle;
+
+  // 配置
+  mesh.position.set(centerX, centerY, 0); // zは0平面に
+  return mesh;
+}
+
+function createBoxBetweenPoints3D(p1, p2, thickness, depth, material) {
+  const dir = new THREE.Vector3().subVectors(p2, p1); // 方向ベクトル
+  const length = dir.length(); // 距離（ボックスの長さ）
+  const center = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5); // 中心点
+
+  const geometry = new THREE.BoxGeometry(length, thickness, depth);
+  const mesh = new THREE.Mesh(geometry, material);
+
+  // デフォルトのボックスはX軸方向に長い → 回転してdir方向に合わせる
+  const quaternion = new THREE.Quaternion();
+  quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), dir.clone().normalize());
+  mesh.quaternion.copy(quaternion);
+
+  mesh.position.copy(center);
+  return mesh;
+}
+
+
+// function createDoubleArcPoints(params1, params2) {
+//   const rangeRad1 = (params1.rangeDeg * Math.PI) / 180;
+//   const segments1 = params1.stepDeg;
+//   const halfRangeX1 = params1.radius * Math.sin(rangeRad1 / 2);
+//   const xStart1 = -halfRangeX1;
+//   const xEnd1 = halfRangeX1;
+//   const stepX1 = (xEnd1 - xStart1) / segments1;
+
+//   const rangeRad2 = (params2.rangeDeg * Math.PI) / 180;
+//   const segments2 = params2.stepDeg;
+//   const halfRangeX2 = params2.radius * Math.sin(rangeRad2 / 2);
+//   const xStart2 = -halfRangeX2;
+//   const xEnd2 = halfRangeX2;
+//   const stepX2 = (xEnd2 - xStart2) / segments2;
+
+//   const material = new THREE.MeshStandardMaterial({ color: 0x3399cc });
+
+//   const x1 = xStart1 + 1 * stepX1;
+//   const y1 = Math.sqrt(params1.radius ** 2 - x1 ** 2) + params1.centerOffset.y;
+  
+//   const x2 = xStart1 + 2 * stepX1;
+  
+//   const x1_b = xStart2 + 1 * stepX2;
+//   const y1_b = Math.sqrt(params2.radius ** 2 - x1_b ** 2) + params2.centerOffset.y;
+
+//   const x2_b = xStart2 + 2 * stepX2;
+//   const y2_b = Math.sqrt(params2.radius ** 2 - x2_b ** 2) + params2.centerOffset.y;
+//   const beam_x = x2
+//   const beam_y = y2_b
+
+//   const box = createBoxBetweenPoints(x1, y1, x1, y1_b, 0.3, 0.3, material);
+//   scene.add(box);
+
+//   for (let i = 1; i < Math.max(segments1, segments2)-1; i++) {
+//     // --- 弧1の点 ---
+
+//     let x1 = xStart1 + i * stepX1;
+//     const y1 = Math.sqrt(params1.radius ** 2 - x1 ** 2) + params1.centerOffset.y;
+//     createDebugSphere(scene, {
+//       x: x1,
+//       y: y1,
+//       z: 0
+//     }, 0.1, 0xff0000); // 赤
+    
+//     let x2 = xStart1 + (i+1) * stepX1;
+//     const y2 = Math.sqrt(params1.radius ** 2 - x2 ** 2) + params1.centerOffset.y;
+   
+//     const box = createBoxBetweenPoints(x2, y2, x1, y1, 0.3, 0.3, material);
+//     scene.add(box);
+//     // --- 弧2の点 ---
+    
+//     const x1_b = xStart2 + i * stepX2;
+//     const y1_b = Math.sqrt(params2.radius ** 2 - x1_b ** 2) + params2.centerOffset.y;
+//     createDebugSphere(scene, {
+//       x: x1,
+//       y: y1_b,
+//       z: 0
+//     }, 0.1, 0x0000ff); // 青
+    
+//     const x2_b = xStart2 + (i+1) * stepX2;
+//     const y2_b = Math.sqrt(params2.radius ** 2 - x2_b ** 2) + params2.centerOffset.y;
+
+//     const box2 = createBoxBetweenPoints(x1, y1_b, x2, y2_b, 0.3, 0.3, material);
+//     scene.add(box2);
+//     if (i < (Math.max(segments1, segments2)-1)/2 ){
+//       const box3 = createBoxBetweenPoints(x1, y1, x2, y2_b, 0.2, 0.2, material);
+//       scene.add(box3);
+//     } else {
+//       const box3 = createBoxBetweenPoints(x2, y2, x1, y1_b, 0.2, 0.2, material);
+//       scene.add(box3);
+//     }
+
+//     const box4 = createBoxBetweenPoints(x2, y2, x2, y2_b, 0.2, 0.2, material);
+//     scene.add(box4);
+    
+//     const box5 = createBoxBetweenPoints(x2, y2, x2, beam_y, 0.2, 0.2, material);
+//     scene.add(box5);
+    
+//     if (i === ( Math.max(segments1, segments2)-2)){
+//       const box5 = createBoxBetweenPoints(beam_x, beam_y, x1, y1_b, 0.3, 0.3, material);
+//       scene.add(box5);
+//     }
+//   }
+// }
+// createDoubleArcPoints(arcA, arcB)
+
+function createDoubleArcPoints(params1, params2) {
+  const Bridge = new THREE.Group()
+  const Bridge_beam = new THREE.Group()
+
+  const rangeRad1 = (params1.rangeDeg * Math.PI) / 180;
+  const segments1 = params1.stepDeg;
+  const halfRangeX1 = params1.radius * Math.sin(rangeRad1 / 2);
+  const xStart1 = -halfRangeX1;
+  const xEnd1 = halfRangeX1;
+  const stepX1 = (xEnd1 - xStart1) / segments1;
+
+  const rangeRad2 = (params2.rangeDeg * Math.PI) / 180;
+  const segments2 = params2.stepDeg;
+  const halfRangeX2 = params2.radius * Math.sin(rangeRad2 / 2);
+  const xStart2 = -halfRangeX2;
+  const xEnd2 = halfRangeX2;
+  const stepX2 = (xEnd2 - xStart2) / segments2;
+
+  const material = new THREE.MeshStandardMaterial({//color: 0x3399cc 
+    color: 0xffffff,      // 暗めのグレー（鉄色）
+    metalness: 0.8,       // 金属光沢最大
+    roughness: 0.5,       // 少しザラザラ（低くするとツルツル）
+    envMapIntensity: 1.0,    // 環境マップの反射強度（envMapを使うなら）
+    side: THREE.FrontSide,
+  });
+
+  const x1 = xStart1 + 1 * stepX1;
+  const y1 = Math.sqrt(params1.radius ** 2 - x1 ** 2) + params1.centerOffset.y;
+  const x2 = xStart1 + 2 * stepX1;
+
+  const x1_b = xStart2 + 1 * stepX2;
+  const y1_b = Math.sqrt(params2.radius ** 2 - x1_b ** 2) + params2.centerOffset.y;
+
+  const x2_b = xStart2 + 2 * stepX2;
+  const y2_b = Math.sqrt(params2.radius ** 2 - x2_b ** 2) + params2.centerOffset.y;
+
+  const beam_x = x2;
+  const beam_y = y2_b;
+
+  const box = createBoxBetweenPoints3D(
+    new THREE.Vector3(x1, y1, 0),
+    new THREE.Vector3(x1, y1_b, 0),
+    0.3, 0.3, material
+  );
+  Bridge.add(box);
+
+  const Bridge_depth = 3.5
+
+  for (let i = 1; i < Math.max(segments1, segments2) - 1; i++) {
+    let x1 = xStart1 + i * stepX1;
+    const y1 = Math.sqrt(params1.radius ** 2 - x1 ** 2) + params1.centerOffset.y;
+  
+    let x2 = xStart1 + (i + 1) * stepX1;
+    const y2 = Math.sqrt(params1.radius ** 2 - x2 ** 2) + params1.centerOffset.y;
+
+    const box = createBoxBetweenPoints3D(
+      new THREE.Vector3(x2, y2, 0),
+      new THREE.Vector3(x1, y1, 0),
+      0.3, 0.3, material
+    );
+    Bridge.add(box);
+
+    const x1_b = xStart2 + i * stepX2;
+    const y1_b = Math.sqrt(params2.radius ** 2 - x1_b ** 2) + params2.centerOffset.y;
+
+    const x2_b = xStart2 + (i + 1) * stepX2;
+    const y2_b = Math.sqrt(params2.radius ** 2 - x2_b ** 2) + params2.centerOffset.y;
+
+    const box2 = createBoxBetweenPoints3D(
+      new THREE.Vector3(x1, y1_b, 0),
+      new THREE.Vector3(x2, y2_b, 0),
+      0.3, 0.3, material
+    );
+    Bridge.add(box2);
+
+    if (i < (Math.max(segments1, segments2) - 1) / 2) {
+      const box3 = createBoxBetweenPoints3D(
+        new THREE.Vector3(x1, y1, 0),
+        new THREE.Vector3(x2, y2_b, 0),
+        0.2, 0.2, material
+      );
+      Bridge.add(box3);
+      if (i>2){
+        const box3_1 = createBoxBetweenPoints3D(
+          new THREE.Vector3(x1, y1, 0),
+          new THREE.Vector3(x2, y2, Bridge_depth*0.5),
+          0.1, 0.1, material
+        );
+        const box3_2 = createBoxBetweenPoints3D(
+          new THREE.Vector3(x1, y1, Bridge_depth),
+          new THREE.Vector3(x2, y2, Bridge_depth*0.5),
+          0.1, 0.1, material
+        );
+        Bridge_beam.add(box3_1)
+        Bridge_beam.add(box3_2)
+      }
+    } else {
+      const box3 = createBoxBetweenPoints3D(
+        new THREE.Vector3(x2, y2, 0),
+        new THREE.Vector3(x1, y1_b, 0),
+        0.2, 0.2, material
+      );
+      Bridge.add(box3);
+      if (i<Math.max(segments1, segments2) - 3){
+        const box3_1 = createBoxBetweenPoints3D(
+          new THREE.Vector3(x1, y1, Bridge_depth*0.5),
+          new THREE.Vector3(x2, y2, 0),
+          0.1, 0.1, material
+        );
+        const box3_2 = createBoxBetweenPoints3D(
+          new THREE.Vector3(x1, y1, Bridge_depth*0.5),
+          new THREE.Vector3(x2, y2, Bridge_depth),
+          0.1, 0.1, material
+        );
+      
+        Bridge_beam.add(box3_1)
+        Bridge_beam.add(box3_2)
+      }
+    }
+
+    const box4 = createBoxBetweenPoints3D(
+      new THREE.Vector3(x2, y2, 0),
+      new THREE.Vector3(x2, y2_b, 0),
+      0.2, 0.2, material
+    );
+    Bridge.add(box4);
+
+    if (i>2&&i<Math.max(segments1, segments2) - 3){
+      const box4_1 = createBoxBetweenPoints3D(
+        new THREE.Vector3(x1, y1, Bridge_depth),
+        new THREE.Vector3(x1, y1, 0),
+        0.1, 0.1, material
+      );
+      Bridge_beam.add(box4_1)
+    }
+
+    const box5 = createBoxBetweenPoints3D(
+      new THREE.Vector3(x2, y2, 0),
+      new THREE.Vector3(x2, beam_y, 0),
+      0.2, 0.2, material
+    );
+    Bridge.add(box5);
+
+    if (i === (Math.max(segments1, segments2) - 4)){
+      const box6 = createBoxBetweenPoints3D(
+        new THREE.Vector3(x2, y2, Bridge_depth),
+        new THREE.Vector3(x2, y2, 0),
+        0.2, 0.2, material
+      );
+      Bridge_beam.add(box6);
+  
+    }
+
+    if (i === (Math.max(segments1, segments2) - 2)) {
+      const box5 = createBoxBetweenPoints3D(
+        new THREE.Vector3(beam_x, beam_y, 0),
+        new THREE.Vector3(x1, y1_b, 0),
+        0.3, 0.3, material
+      );
+      Bridge.add(box5);
+    
+    }
+
+  }
+
+  const Bridge2 = Bridge.clone();
+  Bridge2.position.z += Bridge_depth
+  const ArchBridge = new THREE.Group()
+  ArchBridge.add(Bridge)
+  ArchBridge.add(Bridge2)
+  ArchBridge.add(Bridge_beam)
+  return ArchBridge
+}
+const ArchBridge = createDoubleArcPoints(arcA, arcB)
+ArchBridge.position.set(-6.2,-17,-145)
+ArchBridge.rotation.y = 107 * Math.PI / 180
+scene.add(ArchBridge)
+
+console.log(line_2.points[0])
+console.log(line_2.points[1])
