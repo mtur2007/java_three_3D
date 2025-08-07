@@ -1925,14 +1925,14 @@ function TrainSettings(
     car.position.z = - i * spacing;
 
     if (i === 0){
-      const headlight = new THREE.SpotLight(0xffffff, 15);
-      headlight.angle = Math.PI / 15;
+      const headlight = new THREE.SpotLight(0xfff5e1, 7);
+      headlight.angle = Math.PI / 8;
       headlight.penumbra = 0.2;
       headlight.distance = 10;
       headlight.decay = 1;
       headlight.castShadow = false;
 
-      headlight.position.set(0, -0.3, -1);  // 先頭部に合わせて調整（電車前方向に）
+      headlight.position.set(0, -0.3, 1);  // 先頭部に合わせて調整（電車前方向に）
       car.add(headlight);
       car.add(headlight.target);   // スポットライトはtargetが必須
       headlight.target.position.set(0, 0, 4);  // 向き（車両前方）に合わせて調整
@@ -2375,9 +2375,9 @@ const quantity = 3
 createWall(tunnel_1,tunnel_1,40,-0.9,-0.9,-1,1.5)
 createWall(tunnel_1,tunnel_1,40,0.9,0.9,-1,1.5)
 
-createWall(line_4,line_4,40,0.885,2,-0.95,-5)
-createWall(line_4,line_4,40,10,10,-5,-2.5)
-createWall(line_4,line_4,40,10,30,-2.5,-2.5)
+createWall(line_4,line_4,40,0.885,2,-0.95,-6)
+createWall(line_4,line_4,40,10,10,-6,-4)
+createWall(line_4,line_4,40,10,30,-4,-4)
 
 const water_material = new THREE.MeshStandardMaterial({
   color: 0x005555,         // 白ベース
