@@ -1,5 +1,4 @@
-
-// --- 基本設定 ---
+// functions.js
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.169/build/three.module.js';
 
 const scene = new THREE.Scene();
@@ -1472,7 +1471,13 @@ const pitchLimit = Math.PI / 2 - 0.1;
 const keys = {};
 document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
 document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
-
+let key = null
+document.addEventListener('keydown', (e) => {
+  key = e.key.toLowerCase();
+});
+document.addEventListener('keyup', (e) => {
+  key = null
+});
 // ========== カメラ制御変数 ========== //
 let cameraAngleY = 0;  // 水平回転
 let cameraAngleX = 0;  // 垂直回転
@@ -1569,21 +1574,15 @@ function animate() {
   // キーボード移動処理
   const strafe = (keys['a'] ? 1 : 0) - (keys['d'] ? 1 : 0);
   const forward = (keys['w'] ? 1 : 0) - (keys['s'] ? 1 : 0);
-  
-  document.addEventListener('keydown', (e) => {
-    const key = e.key.toLowerCase();
-  
-    // 数字キー押下で倍率設定
-    if (key >= '1' && key <= '9') {
-      baseSpeed = parseInt(key, 10) * (parseInt(key, 10) *0.005);
-    }
-    // 0キーで倍率リセット
-    else if (key === '0') {
-      baseSpeed = moveSpeed;
-    }
-  
-    keys[key] = true;
-  });
+
+  // 数字キー押下で倍率設定
+  if (key >= '1' && key <= '9') {
+    baseSpeed = parseInt(key, 10) * (parseInt(key, 10) *0.005);
+  }
+  // 0キーで倍率リセット
+  else if (key === '0') {
+    baseSpeed = moveSpeed;
+  }
 
   // カメラ角度による方向ベクトル
   const camX = Math.sin(cameraAngleY);
