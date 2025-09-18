@@ -1,5 +1,6 @@
 // functions.js
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.169/build/three.module.js';
+// import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.169/build/three.module.js';
+import * as THREE from 'three';
 
 const scene = new THREE.Scene();
 
@@ -20,6 +21,127 @@ const envMap = new THREE.CubeTextureLoader()
 const grid = new THREE.GridHelper(200, 80);
 grid.name = "Grid";
 scene.add(grid);
+
+// -------------- GLB 読み込み差し込みコード（そのまま貼る） --------------
+// 必ず three と同バージョンの examples モジュールを使う（あなたは three@0.169 を使っているので合わせる）
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/loaders/DRACOLoader.js';
+
+// DRACO 使用版（.glb が Draco 圧縮されている／将来使うなら有効化）
+const gltfLoader = new GLTFLoader();
+const useDraco = true; // Draco を使う場合は true に。未圧縮なら false
+if (useDraco) {
+  const dracoLoader = new DRACOLoader();
+  // CDN のデコーダパス（例）。必要ならローカルの decoder に変えてください
+  dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+  gltfLoader.setDRACOLoader(dracoLoader);
+}
+
+/**
+ * modelUrl の glb を読み込んでシーンに追加するユーティリティ。
+ * - 中心化（大きな座標を原点付近に移す）
+ * - 自動スケール（巨大なら縮小）
+ * - マテリアルに scene.environment を適用（PBR反射）
+ * - シャドウ設定（必要なら有効化）
+ */
+async function loadModelToScene(modelUrl, options = {}) {
+  const {
+    autoCenter = true,
+    autoScaleMax = 1000,   // モデルの最大寸法がこの値を超えるなら縮小する閾値
+    scaleIfLarge = 0.001,   // 縮小係数（例：0.001）
+    castShadow = false,
+    receiveShadow = false,
+    onProgress = (xhr) => { if (xhr.total) console.log(`model ${(xhr.loaded/xhr.total*100).toFixed(1)}%`); },
+  } = options;
+
+  return new Promise((resolve, reject) => {
+    gltfLoader.load(
+      modelUrl,
+      (gltf) => {
+        const root = gltf.scene || gltf.scenes[0];
+        if (!root) return reject(new Error('glTF にシーンがありません'));
+
+        // 1) マテリアル側に環境マップをセット（PBRの反射を有効化）
+        root.traverse((node) => {
+          if (node.isMesh) {
+            // ランタイムで環境マップがあれば適用
+            if (scene.environment) {
+              // 一部のマテリアルは envMap を直接参照しないことがあるが、通常はこれで反射が得られます
+              if (node.material) {
+                if (Array.isArray(node.material)) {
+                  node.material.forEach(m => {
+                    if (m && 'envMap' in m) {
+                      m.envMap = scene.environment;
+                      m.needsUpdate = true;
+                    }
+                  });
+                } else {
+                  if ('envMap' in node.material) {
+                    node.material.envMap = scene.environment;
+                    node.material.needsUpdate = true;
+                  }
+                }
+              }
+            }
+
+            // シャドウ（重くなる場合は false に）
+            node.castShadow = false//!!castShadow;
+            node.receiveShadow = false//!!receiveShadow;
+
+            // GPU負荷低減のために、if necessary, フラグなどを調整してもよい
+          }
+        });
+
+        // 2) 中心化＋自動縮小（CityGML は世界座標が大きいことが多い）
+        if (autoCenter) {
+          const box = new THREE.Box3().setFromObject(root);
+          const size = box.getSize(new THREE.Vector3());
+          const center = box.getCenter(new THREE.Vector3());
+
+          // 原点に移動
+          root.position.sub(center);
+
+          // 必要なら scale を下げる
+          const maxDim = Math.max(size.x, size.y, size.z);
+          if (maxDim > autoScaleMax) {
+            root.scale.setScalar(scaleIfLarge);
+            console.log(`モデルが大きかったため scale=${scaleIfLarge} を適用しました（maxDim=${maxDim}）`);
+          }
+        }
+
+        // 手動調整
+
+        root.rotation.y = 100 * Math.PI / 180
+        root.position.set(145,40,-175)
+        root.scale.setScalar(0.45);
+
+
+        // 3) シーンに追加
+        scene.add(root);
+
+        resolve(root);
+      },
+      onProgress,
+      (err) => {
+        console.error('GLTF load error', err);
+        reject(err);
+      }
+    );
+  });
+}
+
+// --------------- 実行例：model.glb を読み込む ----------------
+// ここのファイル名をあなたの .glb の名前に変えてください
+loadModelToScene('model.glb', { autoCenter: true, autoScaleMax: 10000, scaleIfLarge: 0.001 })
+  .then((root) => {
+    console.log('GLB loaded and added to scene:', root);
+  })
+  .catch((err) => {
+    console.error('モデルの読み込みで失敗:', err);
+    alert('モデル読み込みに失敗しました。コンソールを確認してください。');
+  });
+// -----------------------------------------------------------------
+
 
 // --- ライト追加（初回のみ） ---
 const ambient = new THREE.AmbientLight(0xffffff, 0.6);
