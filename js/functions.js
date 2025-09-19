@@ -1,5 +1,5 @@
 // functions.js
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.169/build/three.module.js';
+import * as THREE from 'three';
 
 export class TrainSystem {
   constructor(scene) {

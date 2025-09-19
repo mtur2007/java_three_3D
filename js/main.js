@@ -17,10 +17,86 @@ const envMap = new THREE.CubeTextureLoader()
     scene.background = texture;
   });
 
-// --- GridHelper 追加（初回のみ） ---
-const grid = new THREE.GridHelper(200, 80);
-grid.name = "Grid";
-scene.add(grid);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+
+// ----------------- シャドウを有効化（renderer を作った直後あたりに入れる） -----------------
+renderer.shadowMap.enabled = true;                         // シャドウを有効化
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;         // ソフトシャドウ（見た目良し・負荷中）
+renderer.outputColorSpace = THREE.SRGBColorSpace;         // 既存の行があるなら残す
+
+// --- ライト追加（初回のみ） ---
+const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+scene.add(ambient);
+
+// ライト作成
+const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+
+// ライトの位置（光が来る方）
+dirLight.position.set(0, 0, 0); // 例: 斜め上（単位はシーンの単位に依存）
+
+// ターゲット（ライトが向く場所）
+dirLight.target.position.set(0, 0, 0); // 原点を向かせる例
+
+// ターゲットは scene に追加する必要がある
+scene.add(dirLight.target);
+scene.add(dirLight);
+
+// // --- 既存の DirectionalLight(dirLight) にシャドウ設定を追加 ---
+dirLight.castShadow = true;           // ライトがシャドウを投げる
+dirLight.shadow.mapSize.width = 2048; // 解像度（要調整：2048/1024/4096）
+dirLight.shadow.mapSize.height = 2048;
+dirLight.shadow.radius = 4;           // ソフトネス（three r0.150+ で有効）
+dirLight.shadow.bias = -0.0005;       // 影のアーティファクト（自動調整必要）
+dirLight.shadow.normalBias = 0.05;    // 法線オフセット（改善される場合あり）
+
+// 4) マトリクスを強制更新（これで即時反映）
+dirLight.updateMatrixWorld(true);
+dirLight.target.updateMatrixWorld(true);
+
+// // --- GridHelper 追加（初回のみ） ---
+// const grid = new THREE.GridHelper(200, 80);
+// grid.name = "Grid";
+// scene.add(grid);
+
+// ----------------- 「床（ground）」を追加して影を受けさせる（GridHelper の下に置く） -----------------
+const groundGeo = new THREE.PlaneGeometry(1000, 1000);
+const groundMat = new THREE.MeshStandardMaterial({ color: 0x666666, metalness: 0, roughness: 0.9 });
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = 0; // 必要ならシーンの床の高さに合わせる
+ground.receiveShadow = true; // 影を受ける
+ground.name = 'GroundPlane';
+scene.add(ground);
+
+
+// ----------------- シャドウの自動最適化（モデルに合わせてシャドウカメラを調整） -----------------
+// モデル読み込み後に呼ぶ関数（root は読み込んだ Group）
+function fitDirectionalLightShadowForObject(rootObj, light) {
+  const box = new THREE.Box3().setFromObject(rootObj);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+
+  // シャドウカメラをモデルにフィットさせる（余白 factor を入れる）
+  const factor = 1.25;
+  const halfWidth = Math.max(size.x, size.z) * factor * 0.5;
+  light.position.set(center.x + size.x * 0.5, center.y + Math.max(size.y, 50), center.z + size.z * 0.5); // ライト位置を調整
+  light.target.position.copy(center);
+  scene.add(light.target);
+
+  light.shadow.camera.left = -halfWidth;
+  light.shadow.camera.right = halfWidth;
+  light.shadow.camera.top = halfWidth;
+  light.shadow.camera.bottom = -halfWidth;
+
+  light.shadow.camera.near = 0.5;
+  light.shadow.camera.far = Math.max(500, size.y * 10);
+  light.shadow.mapSize.set(2048, 2048); // 必要に応じて解像度を下げる
+  light.shadow.bias = -0.0005;
+  light.shadow.normalBias = 0.05;
+  light.shadow.radius = 4;
+  light.shadow.camera.updateProjectionMatrix();
+}
 
 // -------------- GLB 読み込み差し込みコード（そのまま貼る） --------------
 // 必ず three と同バージョンの examples モジュールを使う（あなたは three@0.169 を使っているので合わせる）
@@ -85,8 +161,8 @@ async function loadModelToScene(modelUrl, options = {}) {
             }
 
             // シャドウ（重くなる場合は false に）
-            node.castShadow = false//!!castShadow;
-            node.receiveShadow = false//!!receiveShadow;
+            node.castShadow = castShadow;
+            node.receiveShadow = receiveShadow;
 
             // GPU負荷低減のために、if necessary, フラグなどを調整してもよい
           }
@@ -110,11 +186,26 @@ async function loadModelToScene(modelUrl, options = {}) {
         }
 
         // 手動調整
+        
+        fitDirectionalLightShadowForObject(root, dirLight);
 
         root.rotation.y = 100 * Math.PI / 180
         root.position.set(145,40,-175)
         root.scale.setScalar(0.45);
 
+        // ----------------- GLTF 読み込み時に各メッシュのシャドウを有効化（loadModelToScene の traverse 内で） -----------------
+        root.traverse((node) => {
+          if (node.isMesh) {
+            node.castShadow = true;     // このメッシュが影を落とす
+            node.receiveShadow = true;  // このメッシュが影を受ける（床や周囲の建物に有効）
+            // 必要に応じてマテリアルの設定（透明など）を行う
+            if (Array.isArray(node.material)) {
+              node.material.forEach(m => { if (m) m.needsUpdate = true; });
+            } else if (node.material) {
+              node.material.needsUpdate = true;
+            }
+          }
+        });
 
         // 3) シーンに追加
         scene.add(root);
@@ -141,16 +232,6 @@ loadModelToScene('model.glb', { autoCenter: true, autoScaleMax: 10000, scaleIfLa
     alert('モデル読み込みに失敗しました。コンソールを確認してください。');
   });
 // -----------------------------------------------------------------
-
-
-// --- ライト追加（初回のみ） ---
-const ambient = new THREE.AmbientLight(0xffffff, 0.6);
-scene.add(ambient);
-
-const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-dirLight.position.set(0, 20, 0);
-dirLight.name = "SunLight";
-scene.add(dirLight);
 
 // --- 昼夜切替 ---
 let isNight = false;
@@ -201,12 +282,6 @@ toggleBtn.addEventListener("click", () => {
 const camera = new THREE.PerspectiveCamera(
   75, window.innerWidth / window.innerHeight, 0.1, 1000
 );
-
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-
 
 document.body.appendChild(renderer.domElement);
 
@@ -1699,7 +1774,7 @@ function animate() {
 
   // 数字キー押下で倍率設定
   if (key >= '1' && key <= '9') {
-    baseSpeed = parseInt(key, 10) * (parseInt(key, 10) *0.005);
+    baseSpeed = (parseInt(key, 10) **3)*0.005;
   }
   // 0キーで倍率リセット
   else if (key === '0') {
