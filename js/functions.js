@@ -70,7 +70,7 @@ export class TrainSystem {
   }
   
   // 線路表示
-  createTrack(curve, color = 0x333333) {
+  createTrack(curve, color = 0x333333, name=false) {
     const points = curve.getPoints(100);
     // すべての点にY座標を追加 or 修正（例：Y=1.5）
     for (let i = 0; i < points.length; i++) {
@@ -79,6 +79,9 @@ export class TrainSystem {
     const geom = new THREE.BufferGeometry().setFromPoints(points);
     const mat = new THREE.LineBasicMaterial({ color: 0x000000 });
     const line = new THREE.Line(geom, mat);
+    if (name){
+      line.name = 'Rail'
+    }
     this.scene.add(line);
   }  
 
@@ -272,7 +275,7 @@ export class TrainSystem {
   } 
   
   // 線路 ,I...I,
-  rawRail(points_data){
+  rawRail(points_data, name = false){
     const points = points_data[0]
     const angles = points_data[1]
     
@@ -427,11 +430,14 @@ export class TrainSystem {
       side: THREE.FrontSide
     });
     const mesh = new THREE.Mesh(geometry, material);
+    if(name){
+      mesh.name = 'Rail'
+    }
     this.scene.add(mesh);
   
   }
 
-  createRail(curve, interval){
+  createRail(curve, name = false){
     const points_right = this.RailMargin(curve.getPoints(70), 0.24,true);
     const points_lift = this.RailMargin(curve.getPoints(70), -0.24,true);
     const points_center = this.RailMargin(this.getPointsEveryM(curve, 0.3), 0,true);
@@ -464,11 +470,16 @@ export class TrainSystem {
       this.object_update({ins_obj: loc, ins_idx: i*2+1, pos_x: pos.x+x_sin*-0.245,  pos_y: pos.y-0.86, pos_z: pos.z+z_cos*-0.21, rot_x: NaN, rot_y: angles[i], rot_z: NaN,scale: NaN})
   
     }
+    
+    if(name){
+      sleeper.name = 'Rail'
+      loc.name = 'Rail'
+    }
     this.scene.add(sleeper)
     this.scene.add(loc)
   
-    this.rawRail(points_right)
-    this.rawRail(points_lift)
+    this.rawRail(points_right, name)
+    this.rawRail(points_lift, name)
     
   }
   
@@ -1218,8 +1229,6 @@ export class TrainSystem {
 
     const Angle_0 = Angle_1
     Angle_1 = Math.atan2(diff_x,diff_z)
-    console.log(Bridge_width_1,((Bridge_width_0/3)*0.25),)
-    console.log(margin_1)
 
     for (let i = 0; i<Math.floor(beam_num/2); i++){
       this.scene.add(this.createBoxBetweenPoints3D(({x: middle_0.x+Math.sin(Angle_0)*margin_0*(((i+1)*2)-half)+Math.sin(angles_1[i])*cut_len,z: middle_0.z+Math.cos(Angle_0)*margin_0*(((i+1)*2)-half)+Math.cos(angles_1[i])*cut_len, y: y}),
@@ -1235,9 +1244,6 @@ export class TrainSystem {
             this.scene.add(this.createBoxBetweenPoints3D(middle_0,middle_1,0.7,0.2,material))
           };        
     }
-
-    this.Map_pin(points_1[i].x,points_1[i].z)
-    this.Map_pin(points_2[i].x,points_2[i].z)
 
     // for (let i = 0; i<beam_num/2; i++){
     //     this.scene.add(this.createBoxBetweenPoints3D(({x: middle_0.x-Math.sin(angles_1[i])*margin_0*(i*2+half),z: middle_0.z-Math.cos(angles_1[i])*margin_0*(i*2+1), y: y}),

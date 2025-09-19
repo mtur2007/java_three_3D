@@ -2,6 +2,8 @@
 // import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.169/build/three.module.js';
 import * as THREE from 'three';
 
+import { WorldCreat } from './world_creat.js';
+
 const scene = new THREE.Scene();
 
 // 昼の環境マップ（初期）
@@ -17,7 +19,8 @@ const envMap = new THREE.CubeTextureLoader()
     scene.background = texture;
   });
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const canvas = document.getElementById('three-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas });
 renderer.setSize(window.innerWidth, window.innerHeight);
 
 // ----------------- シャドウを有効化（renderer を作った直後あたりに入れる） -----------------
@@ -127,7 +130,7 @@ async function loadModelToScene(modelUrl, options = {}) {
     scaleIfLarge = 0.001,   // 縮小係数（例：0.001）
     castShadow = false,
     receiveShadow = false,
-    onProgress = (xhr) => { if (xhr.total) console.log(`model ${(xhr.loaded/xhr.total*100).toFixed(1)}%`); },
+    onProgress = (xhr) => (xhr.total),
   } = options;
 
   return new Promise((resolve, reject) => {
@@ -258,7 +261,6 @@ toggleBtn.addEventListener("click", () => {
       });
     }
 
-    grid.visible = false;
     dirLight.visible = false;
     ambient.visible = false;
 
@@ -270,7 +272,44 @@ toggleBtn.addEventListener("click", () => {
     scene.background = envMap;
     scene.environment = envMap;
 
-    grid.visible = true;
+    dirLight.visible = true;
+    ambient.visible = true;
+
+    renderer.toneMappingExposure = 2.5;
+    toggleBtn.textContent = "🌙 夜にする";
+  }
+});
+
+toggleBtn.addEventListener("touchstart", () => {
+  isNight = !isNight;
+
+  if (isNight) {
+    // 🌙 夜モード
+    if (envMapNight) {
+      scene.background = envMapNight;
+      scene.environment = envMapNight;
+    } else {
+      const loader = new THREE.TextureLoader();
+      loader.load('textures/shanghai_bund_4k.jpg', (texture) => {
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        texture.colorSpace = THREE.SRGBColorSpace;
+        scene.background = texture;
+        scene.environment = texture;
+        envMapNight = texture;
+      });
+    }
+
+    dirLight.visible = false;
+    ambient.visible = false;
+
+    renderer.toneMappingExposure = 1.0;
+    toggleBtn.textContent = "☀️ 昼にする";
+
+  } else {
+    // ☀️ 昼モード
+    scene.background = envMap;
+    scene.environment = envMap;
+
     dirLight.visible = true;
     ambient.visible = true;
 
@@ -1374,10 +1413,10 @@ TSys.createBridgeGirder(sliceCurvePoints(line_2, 0, Elevated_start), 10, interva
 TSys.createBridgeGirder(sliceCurvePoints(line_3, 0, Elevated_start+0.02), 10, interval);
 
 // 線路生成
-TSys.createRail(line_1, 60)
-TSys.createRail(line_2, 60)
-TSys.createRail(line_3, 60)
-TSys.createRail(line_4, 60)
+TSys.createRail(line_1)
+TSys.createRail(line_2)
+TSys.createRail(line_3)
+TSys.createRail(line_4)
 
 // 駅(プラットホーム)を生成
 TSys.createStation(track1,track2,200,y,0.7, '|[]|') // 島式 |[]| : 相対式 []||[]
@@ -1587,6 +1626,12 @@ async function startQuadrupleCrossDemo() {
     button.innerText = `立体交差 [ 準備中... ]（列車未撤収 ${run_num} 編成）`;
   });
 
+  // ボタン押下イベント（要求をフラグにする）
+  button.addEventListener("touchstart", () => {
+    crossoverRequested = true;
+    button.innerText = `立体交差 [ 準備中... ]（列車未撤収 ${run_num} 編成）`;
+  });
+
   crossoverRequested = true;
 
   while (run_quattro != run_number){
@@ -1639,6 +1684,9 @@ document.getElementById("toggle-crossover").addEventListener("click", () => {
   startQuadrupleCrossDemo();  // ← ここで関数を呼び出す
 });
 
+document.getElementById("toggle-crossover").addEventListener("touchstart", () => {
+  startQuadrupleCrossDemo();  // ← ここで関数を呼び出す
+});
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -1648,15 +1696,673 @@ runTrain(Train_3, reversedCurve_3, track3_doors, door_interval, max_speed, add_s
 runTrain(Train_4, reversedCurve_4, track4_doors, door_interval, max_speed, add_speed, 0.5439)
 
 // カメラ操作 ----------------------------------------------------------------
+// const canvas = document.getElementById('three-canvas');
+
+const cameraSub = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+// サブカメラ（別角度）
+cameraSub.position.set(10, 5, 0);
+cameraSub.lookAt(0, 0, 0);
+
+// 物体描画
+const cube_geometry = new THREE.BoxGeometry();
+const cube_material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+const cube = new THREE.Mesh(cube_geometry, cube_material);
+
+// 線描画
+function createLine(p1, p2, color = 0xff0000) {
+  const points = [
+    new THREE.Vector3(p1.x, p1.y, p1.z),
+    new THREE.Vector3(p2.x, p2.y, p2.z)
+  ];
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const material = new THREE.LineBasicMaterial({ color });
+  return new THREE.Line(geometry, material);
+}
+
+// マウス座標管理用のベクトルを作成
+const mouse = new THREE.Vector2();
+// マウスイベントを登録
+canvas.addEventListener('mousemove', (e) => {
+  handleMouseMove(e.clientX, e.clientY);
+
+  // console.log(e.clientX, e.clientY)
+  
+});
+// タッチイベント
+document.addEventListener("touchstart", (e) => {
+  e.preventDefault(); // スクロール防止
+  const touch = e.touches[0];
+  handleMouseMove(touch.clientX, touch.clientY);
+}, { passive: false });
+
+document.addEventListener("touchmove", (e) => {
+  e.preventDefault(); // スクロール防止
+  const touch = e.touches[0];
+  handleMouseMove(touch.clientX, touch.clientY);
+}, { passive: false });
+
+// マウスを動かしたときのイベント
+function handleMouseMove(x, y) {
+  const element = canvas;
+  // canvas要素上のXY座標
+  const clientX = x - element.offsetLeft;
+  const clientY = y - element.offsetTop;
+  // canvas要素の幅・高さ
+  const w = element.offsetWidth;
+  const h = element.offsetHeight;
+  // -1〜+1の範囲で現在のマウス座標を登録する
+  mouse.x = ( clientX / w ) * 2 - 1;
+  mouse.y = -( clientY / h ) * 2 + 1;
+}
+
+// レイキャストを作成
+const raycaster = new THREE.Raycaster();
+const targetObjects = [];
+// for (let i = 1; i < 4; i++) {
+//   const cube = new THREE.Mesh(geometry, material.clone()); // 色変更できるようにclone
+//   cube.position.set(i * 2, 0.5, 0); // X方向に2ずつ離して配置
+//   scene.add(cube);
+//   targetObjects.push(cube);
+// }
+
+// モード切替関数
+function toggleMode(Btn,Ricons,Mode) {
+  Mode = (Mode + 1) % Ricons.length; // モードを順番に切替
+  const bgIcon = Btn.querySelector('.background-icon');
+  const fgIcon = Btn.querySelector('.foreground-icon');
+
+  bgIcon.textContent = Ricons[Mode].bg;
+  fgIcon.textContent = Ricons[Mode].fg;
+
+  return Mode
+}
+
+let pause = false;
+
+// すべてのボタンに hover 検出を付ける
+const buttons = document.querySelectorAll("button");
+
+buttons.forEach(btn => {
+  btn.addEventListener("mouseenter", () => {
+    pause = true; // 一時停止
+  });
+
+  btn.addEventListener("mouseleave", () => {
+    pause = false; // 再開
+  });
+});
+
+buttons.forEach(btn => {
+  // 指がボタンに触れたとき（mouseenter 相当）
+  btn.addEventListener("touchstart", (e) => {
+    e.preventDefault(); // ページスクロールを防止
+    pause = true; // 一時停止
+  }, { passive: false });
+
+  // 指がボタンから離れたとき（mouseleave 相当）
+  btn.addEventListener("touchend", () => {
+    pause = false; // 再開
+  });
+
+  // タッチがキャンセルされたとき（例: 指が画面外にずれた）
+  btn.addEventListener("touchcancel", () => {
+    pause = false; // 再開
+  });
+});
+
+// 物体の削除
+function clean_object(namesToFind){
+  const targets = [];
+  scene.traverse(obj => {
+    if (namesToFind.includes(obj.name)) {
+      targets.push(obj);
+    }
+  });
+  // まとめて削除
+  targets.forEach(obj => {
+    scene.remove(obj);
+
+    // メモリ解放したい場合
+    if (obj.geometry) obj.geometry.dispose();
+    if (obj.material) obj.material.dispose();
+  });
+}
+
+function getObject(namesToFind){
+  const targets = [];
+  scene.traverse(obj => {
+    if (namesToFind.includes(obj.name)) {
+      targets.push(obj);
+    }
+  });
+  return targets
+}
+
+// 物体の非表示/表示
+function visual_object(targets=[]){
+  // まとめて変更
+  targets.forEach(obj => {
+    obj.visible = !obj.visible; // 非表示
+  });
+}
+
+function drawingObject(){
+
+  clean_object(['DeckSlab','Pillar','Rail'])
+  if (targetObjects.length < 2){return}
+  const Points = targetObjects.map(obj => obj.position.clone());
+
+  // 指定したポイントから線(線路の軌道)を生成
+  const line = new THREE.CatmullRomCurve3(Points);
+
+
+  // TSys.generateElevated(line, 5, 1);
+  TSys.createRail(line, true)
+  // TSys.createTrack(line, 0x00ff00)
+  // console.log(positions); // [Vector3, Vector3, ...]
+}
+
+
+const GuideLine = createLine({x:0,y:2,z:0}, {x:0,y:-2,z:0}, 0xff0000)
+GuideLine.name = 'GuideLine'
+GuideLine.position.set(0,0,0);
+scene.add(GuideLine)
+
+const GuideGrid = new THREE.GridHelper(5, 10, 0x8888aa, 0x88aa88);
+GuideGrid.name = "GuideGrid";
+GuideGrid.position.set(0,0,0);
+scene.add(GuideGrid);
+
+const GuideGrid_Center_x = createLine({x:2,y:0.1,z:0}, {x:-2,y:0.1,z:0}, 0xff0000)
+GuideGrid_Center_x.name = 'GuideLine'
+GuideGrid_Center_x.position.set(0,0,0);
+scene.add(GuideGrid_Center_x)
+
+const GuideGrid_Center_z = createLine({x:0,y:0.1,z:2}, {x:0,y:0.1,z:-2}, 0xff0000)
+GuideGrid_Center_z.name = 'GuideLine'
+GuideGrid_Center_z.position.set(0,0,0);
+scene.add(GuideGrid_Center_z)
+
+GuideLine.visible = false
+GuideGrid.visible = false
+GuideGrid_Center_x.visible = false
+GuideGrid_Center_z.visible = false
+
+let choice_object = false
+let search_object = true
+let move_direction_y = false
+
+// search_point();
+
+function getIntersectObjects(){
+  // レイキャスト = マウス位置からまっすぐに伸びる光線ベクトルを生成
+  raycaster.setFromCamera(mouse, camera);
+
+  // その光線とぶつかったオブジェクトを得る
+  return raycaster.intersectObjects(targetObjects, true);
+};
+
+// 毎フレーム時に実行されるループイベントです
+async function search_point() {
+  
+  if (!search_object){return}
+
+  // 画面上の光線とぶつかったオブジェクトを得る
+  const intersects = getIntersectObjects();
+  
+  await sleep(80);
+
+  if (intersects.length > 0) {
+    if (choice_object != intersects[0].object){
+      if (choice_object !== false){ 
+        // 残像防止
+        choice_object.material.color.set(0xff0000)
+        GuideLine.visible = false
+        GuideGrid.visible = false
+      }
+
+      // 物体の取得
+      choice_object = intersects[0].object
+      choice_object.material.color.set(0x00ff00)
+
+      if (move_direction_y){
+        GuideLine.position.copy(choice_object.position)
+        GuideLine.visible = true
+
+      } else {
+        GuideGrid.position.copy(choice_object.position)
+        GuideGrid.material.color.set(0x88aa88)
+        GuideGrid.visible = true
+      }
+    }
+
+  } else {
+    if (choice_object !== false){choice_object.material.color.set(0xff0000)}
+    choice_object = false;
+    GuideLine.visible = false
+    GuideGrid.visible = false
+  }  
+
+  // レンダリング
+  renderer.render(scene, camera);
+  await search_point();
+}
+
+function coord_DisplayTo3D(Axis_num=false){
+
+  const pos = camera.position
+  
+  let t = 0
+  let point = []
+  if (move_direction_y === false | Axis_num === false){
+
+    let set_y = 1
+    if (Axis_num!=false){ set_y = Axis_num.y}
+
+    raycaster.setFromCamera(mouse, camera);
+    const dir = raycaster.ray.direction
+
+    const t = Math.abs((camera.position.y - set_y)/dir.y)
+    
+    // 交点を計算
+    point = new THREE.Vector3(
+      pos.x + dir.x * t,
+      set_y,
+      pos.z + dir.z * t
+    );
+
+    // console.log(point)
+    // if (targetObjects.length === 2){
+    //   const pos_0 = targetObjects[0].position
+    //   const phi = 0.768 + 1.5708
+    //   const phi_rangth = Math.sqrt((point.x - pos_0.x)**2 + (point.z - pos_0.z)**2) 
+    //   point.x = pos_0.x + Math.sin(phi) * phi_rangth
+    //   point.z = pos_0.z + Math.cos(phi) * phi_rangth
+    // }
+
+  } else {
+    raycaster.setFromCamera(mouse, camera);
+    const dir = raycaster.ray.direction
+
+    const mouAngleY = cameraAngleY - Math.atan2(dir.x,dir.z) // マウスを3d世界の座標のベクトルに変換
+    const diff = {x: Axis_num.x - pos.x, z: Axis_num.z - pos.z}
+    const hypotenuse = Math.cos(Math.atan2(diff.x, diff.z) - cameraAngleY) * Math.sqrt(diff.x**2 + diff.z**2)
+    
+    // console.log('• • : '+'x, '+diff.x+'z, '+diff.z)
+    // console.log('•-• : '+hypotenuse)
+    // console.log('_./ : '+mouAngleY + ' x,'+ Math.sin(mouAngleY) + ' y,'+Math.cos(mouAngleY))
+    // console.log('--,-: '+(hypotenuse/Math.cos(mouAngleY))*Math.cos(mouAngleY),hypotenuse/Math.cos(mouAngleY)*dir.y)
+    
+    t = hypotenuse/(Math.cos(cameraAngleY)*dir.z+Math.sin(cameraAngleY)*dir.x)//,dir.z
+    
+    // console.log('/ : '+hypotenuse+' '+Math.floor(Math.cos(cameraAngleY)*dir.z+Math.sin(cameraAngleY)*dir.x))
+    // console.log('t : '+t)
+  
+    // 交点を計算
+    point = new THREE.Vector3(
+      Axis_num.x,
+      // pos.x + dir.x * t,
+      pos.y + dir.y * t,
+      // pos.z + dir.z * t,
+      Axis_num.z
+    );
+  }
+
+  return point
+}
+
+let dragging = false;
+function handleDrag() {
+  if (dragging === false) { return }
+
+  let point = 0
+
+  if (!move_direction_y){
+    point = coord_DisplayTo3D(choice_object.position)
+  } else {
+    point = coord_DisplayTo3D(choice_object.position)
+  }
+
+  choice_object.position.set(point.x,point.y,point.z)
+
+  GuideLine.position.set(point.x,point.y,point.z)
+  // GuideLine.visible = true
+
+  if (!move_direction_y){
+    GuideGrid.position.set(point.x,point.y,point.z)
+    GuideGrid.material.color.set(0x8888aa)
+    // GuideGrid.visible = true
+  }
+
+  drawingObject();
+}
+
+function handleMouseUp() {
+
+  dragging = false;
+  if (OperationMode === 0){return}
+
+  // レイキャスト = マウス位置からまっすぐに伸びる光線ベクトルを生成
+  let point= 0
+  if (choice_object) { // Only update position if an object was chosen
+    if (!move_direction_y){
+      point = coord_DisplayTo3D(choice_object.position)
+    } else {
+      point = coord_DisplayTo3D(choice_object.position)
+    }
+    choice_object.position.set(point.x,point.y,point.z)
+    choice_object.material.color.set(0xff0000) // Reset color to red
+  }
+
+  search_object = true;
+  choice_object = false; // Deselect the object
+
+  GuideLine.visible = false;
+  GuideGrid.visible = false;
+
+  drawingObject();
+
+}
+  
+async function handleMouseDown() {
+  if (pause || OperationMode !== 1) { return; }
+
+  search_object = false
+  await sleep(200);
+  search_object = true
+  
+  // 架線柱配置モード
+  if (polePlacementMode) {
+    const point = coord_DisplayTo3D();
+    const pole = TSys.createCatenaryPole(5, 5, 2, 5, 1);
+    pole.position.set(point.x, point.y, point.z);
+    scene.add(pole);
+    deactivateAllModes(); // 配置後に全モードを解除
+    return;} 
+  
+    // 線路描画モード
+  if (trackDrawingMode && objectEditMode === 'CREATE_NEW') {
+    const point = coord_DisplayTo3D();
+    const cube_clone = new THREE.Mesh(cube_geometry, cube_material.clone());
+    cube_clone.position.set(point.x, point.y, point.z);
+    scene.add(cube_clone);
+    targetObjects.push(cube_clone);
+    drawingObject();
+    return;}
+  
+  // 通常のオブジェクト選択・移動モード
+  if (choice_object != false && objectEditMode === 'MOVE_EXISTING'){
+    if (search_object){
+      search_object = false
+      choice_object.material.color.set(0x0000ff)
+      
+      dragging = true;
+      
+      GuideLine.visible = true
+      if (!move_direction_y){
+        GuideGrid.visible = true
+      }
+    }
+
+  }
+}
+
+// 物体移動開始
+window.addEventListener('mousedown', handleMouseDown);
+window.addEventListener('touchstart', (e) => {
+  e.preventDefault();      // ← スクロールを止める
+  if (objectEditMode === 'MOVE_EXISTING') { search_point(); }
+  handleMouseDown();      // ← 同じ関数に渡している
+}, { passive: false });
+
+// 物体移動追尾
+document.addEventListener('mousemove', handleDrag);
+document.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  handleDrag();
+}, { passive: false });
+
+// 物体移動完了
+document.addEventListener('mouseup', () => {
+  handleMouseUp();
+  if (objectEditMode === 'MOVE_EXISTING') { search_point(); }
+});
+document.addEventListener('touchend', () => {
+  // e.preventDefault(); ← 多分ここは不要（あとで説明）
+  // console.log('UP')
+  handleMouseUp();
+});
+
+
+function setMeshListOpacity(list, opacity) {
+  list.forEach(mesh => {
+    if (mesh.isMesh) {
+      // mesh.material.transparent = true;
+      // mesh.material.opacity = opacity;
+      mesh.visible = !mesh.visible
+    }
+  });
+}
+
+const ModeChangeBtn = document.getElementById("mode-change")
+const createPoleBtn = document.getElementById('create-pole');
+const drawTrackBtn = document.getElementById('draw-track');
+
+// モード状態（例）
+let OperationMode = 0;
+// アイコンセット例
+const ModeRicons = [
+  { bg: '🌐', fg: '🛠️' }, // モード0
+  { bg: '🌐', fg: '🎦' }, // モード1
+]
+
+let polePlacementMode = false;
+let trackDrawingMode = false;
+// let trackEditSubMode = 'CREATE_NEW'; // 'CREATE_NEW' or 'MOVE_EXISTING'
+let objectEditMode = 'CREATE_NEW'; // 'CREATE_NEW' or 'MOVE_EXISTING'
+
+const trackCreateNewBtn = document.getElementById('track-create-new');
+const trackMoveExistingBtn = document.getElementById('track-move-existing');
+
+function deactivateAllModes() {
+  polePlacementMode = false;
+  trackDrawingMode = false;
+  createPoleBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+  drawTrackBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+  trackCreateNewBtn.style.display = "none";
+  trackMoveExistingBtn.style.display = "none";
+}
+
+function setObjectEditMode(mode) {
+  objectEditMode = mode;
+  if (objectEditMode === 'CREATE_NEW') {
+    trackCreateNewBtn.style.backgroundColor = 'rgba(255, 255, 0, 0.5)';
+    trackMoveExistingBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+    search_object = false
+  } else {
+    trackCreateNewBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+    trackMoveExistingBtn.style.backgroundColor = 'rgba(255, 255, 0, 0.5)';
+    if (objectEditMode === 'MOVE_EXISTING') { search_point(); }
+  }
+}
+
+trackCreateNewBtn.addEventListener('touchstart', () => setObjectEditMode('CREATE_NEW'));
+trackCreateNewBtn.addEventListener('click', () => setObjectEditMode('CREATE_NEW'));
+
+trackMoveExistingBtn.addEventListener('touchstart', () => setObjectEditMode('MOVE_EXISTING'));
+trackMoveExistingBtn.addEventListener('click', () => setObjectEditMode('MOVE_EXISTING'));
+
+createPoleBtn.addEventListener('touchstart', handleCreatePoleClick);
+createPoleBtn.addEventListener('click', handleCreatePoleClick);
+
+function handleCreatePoleClick() {
+  if (OperationMode !== 1) return;
+  polePlacementMode = !polePlacementMode;
+  trackDrawingMode = false;
+  if (polePlacementMode) {
+    createPoleBtn.style.backgroundColor = 'rgba(255, 255, 0, 0.5)';
+    drawTrackBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+  } else {
+    deactivateAllModes();
+  }
+}
+
+drawTrackBtn.addEventListener('touchstart', handleDrawTrackClick);
+drawTrackBtn.addEventListener('click', handleDrawTrackClick);
+
+function handleDrawTrackClick() {
+  if (OperationMode !== 1) return;
+  trackDrawingMode = !trackDrawingMode;
+  polePlacementMode = false;
+  if (trackDrawingMode) {
+    drawTrackBtn.style.backgroundColor = 'rgba(255, 255, 0, 0.5)';
+    createPoleBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+    trackCreateNewBtn.style.display = "block";
+    trackMoveExistingBtn.style.display = "block";
+  } else {
+    deactivateAllModes();
+  }
+}
+
+ModeChangeBtn.addEventListener("touchstart", handleModeChangeClick);
+ModeChangeBtn.addEventListener("click", handleModeChangeClick);
+
+function handleModeChangeClick() {
+  OperationMode = toggleMode(ModeChangeBtn,ModeRicons,OperationMode);
+  if (OperationMode === 1){
+    // 編集モード
+    createPoleBtn.style.display = "block";
+    drawTrackBtn.style.display = "block";
+    EditRBtn.style.display = "block";
+    search_object = true
+    move_direction_y = false
+    EditRmode = 0
+    EditRmode = toggleMode(EditRBtn,EditRicons,EditRmode);
+    setMeshListOpacity(targetObjects, 1);
+    // search_point()
+  } else {
+    // 閲覧モード
+    createPoleBtn.style.display = "none";
+    drawTrackBtn.style.display = "none";
+    deactivateAllModes();
+    EditRBtn.style.display = "none";
+    search_object = false
+    choice_object = false
+    dragging = false
+    setMeshListOpacity(targetObjects, 0.0);
+  }
+}
+
+
+const EditRBtn = document.getElementById("edit-rotation")
+// モード状態（例）
+let EditRmode = 1;
+// アイコンセット例
+const EditRicons = [
+  { bg: '⏥', fg: '⤮' }, // モード0
+  { bg: '⏥', fg: '⇡' },  // モード1
+]
+
+EditRBtn.addEventListener("touchstart", handleEditRClick);
+EditRBtn.addEventListener("click", handleEditRClick);
+
+function handleEditRClick() {
+  move_direction_y = !move_direction_y
+  EditRmode = toggleMode(EditRBtn,EditRicons,EditRmode);
+}
+
+// 非表示
+EditRBtn.style.display = "none";
+
+  
+// リサイズ変更
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+
+// 視点操作
+// カメラ操作 ----------------------------------------------------------------
+
+let touchState = 'NONE';
+let lastPosition1 = { x: 0, y: 0 };
+let lastPosition2 = { x: 0, y: 0 };
+let lastDistance = 0;
+
+canvas.addEventListener('touchstart', (e) => {
+  // e.preventDefault();
+  switch (e.touches.length) {
+    case 1:
+      touchState = 'ROTATE';
+      lastPosition1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      break;
+    case 2:
+      touchState = 'PAN_ZOOM';
+      lastPosition1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      lastPosition2 = { x: e.touches[1].clientX, y: e.touches[1].clientY };
+      lastDistance = Math.hypot(lastPosition1.x - lastPosition2.x, lastPosition1.y - lastPosition2.y);
+      break;
+    default:
+      touchState = 'NONE';
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+
+  // e.preventDefault();
+  e.preventDefault();
+
+  // Update mouse vector for raycasting (from handleMouseMove)
+  handleMouseMove(e.touches[0].clientX, e.touches[0].clientY);
+
+  if (touchState === 'NONE') return;
+
+  if (e.touches.length === 1 && dragging === false && touchState === 'ROTATE') {
+    const dx = e.touches[0].clientX - lastPosition1.x;
+    const dy = e.touches[0].clientY - lastPosition1.y;
+
+    cameraAngleY += dx * 0.005;
+    cameraAngleX += dy * 0.005;
+    cameraAngleX = Math.max(-pitchLimit, Math.min(pitchLimit, cameraAngleX));
+
+    lastPosition1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  } else if (e.touches.length === 2 && touchState === 'PAN_ZOOM') {
+    const currentPosition1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    const currentPosition2 = { x: e.touches[1].clientX, y: e.touches[1].clientY };
+    const currentDistance = Math.hypot(currentPosition1.x - currentPosition2.x, currentPosition1.y - currentPosition2.y);
+    const midPoint = { x: (currentPosition1.x + currentPosition2.x) / 2, y: (currentPosition1.y + currentPosition2.y) / 2 };
+    const lastMidPoint = { x: (lastPosition1.x + lastPosition2.x) / 2, y: (lastPosition1.y + lastPosition2.y) / 2 };
+
+    // Zoom
+    const zoomAmount = lastDistance / currentDistance;
+    const direction = new THREE.Vector3();
+    camera.getWorldDirection(direction);
+    camera.position.addScaledVector(direction, (zoomAmount - 1) * -5);
+
+    // Pan
+    const dx = midPoint.x - lastMidPoint.x;
+    const dy = midPoint.y - lastMidPoint.y;
+
+    const right = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0);
+    const forward = new THREE.Vector3(Math.sin(cameraAngleY), 0, Math.cos(cameraAngleY));
+
+    camera.position.addScaledVector(right.setY(0).normalize(), -dx * 0.1);
+    camera.position.addScaledVector(forward.setY(0).normalize(), dy * 0.1);
+
+    lastPosition1 = currentPosition1;
+    lastPosition2 = currentPosition2;
+    lastDistance = currentDistance;
+  }
+});
+
+canvas.addEventListener('touchend', (e) => {
+  touchState = 'NONE';
+});
 
 // アナロク操作（デバッグ用）
 // カメラの位置（視点の位置）
-3, y, -50
-//                  -         ↑↓
-camera.position.set(-0.1, 14, -35);
-// カメラの注視点（視線の向き
-camera.lookAt(new THREE.Vector3(3, y, -35));
-// renderer.render(scene, camera);
 
 // キーボード操作（鑑賞用）
 // ========== 設定値 ========== //
@@ -1668,17 +2374,12 @@ const pitchLimit = Math.PI / 2 - 0.1;
 const keys = {};
 document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
 document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
-let key = null
-document.addEventListener('keydown', (e) => {
-  key = e.key.toLowerCase();
-});
-document.addEventListener('keyup', (e) => {
-  key = null
-});
+
 // ========== カメラ制御変数 ========== //
 let cameraAngleY = 0;  // 水平回転
 let cameraAngleX = 0;  // 垂直回転
-
+camera.position.y += 10
+camera.position.x = -1
 // ========== ボタン UI ========== //
 // 状態フラグ
 let speedUp = false;
@@ -1702,100 +2403,44 @@ document.getElementById('btn-up').addEventListener('mouseup', () => moveUp = fal
 document.getElementById('btn-down').addEventListener('mousedown', () => moveDown = true);
 document.getElementById('btn-down').addEventListener('mouseup', () => moveDown = false);
 
-// ========== スティック移動ベクトル ========== //
-let moveVector = { x: 0, y: 0 };
-
-// ========== スティック UI ========== //
-const joystickLeft = nipplejs.create({
-  zone: document.getElementById('left-stick'),
-  mode: 'static',
-  position: { left: '20%', bottom: '20%' },
-  color: 'blue',
-});
-
-const joystickLook = nipplejs.create({
-  zone: document.getElementById('right-stick'),
-  mode: 'static',
-  position: { right: '20%', bottom: '20%' },
-  color: 'red',
-});
-
-joystickLeft.on('move', (evt, data) => {
-  if (!data.angle) return;
-  const rad = data.angle.radian -1.6;
-  const speed = data.distance * 0.02;
-
-  const adjustedRad = rad + cameraAngleY;
-
-  moveVector.x = Math.sin(adjustedRad) * speed;
-  moveVector.y = Math.cos(adjustedRad) * speed;
-});
-
-joystickLeft.on('end', () => {
-  moveVector.x = 0;
-  moveVector.y = 0;
-});
-
-let lookVector = { x: 0, y: 0 };
-
-joystickLook.on('move', (evt, data) => {
-  const rad = data.angle.radian - 1.6;
-
-  // ベクトル成分に変換（X: 横方向, Y: 縦方向）
-  const vecX = Math.sin(rad)
-  const vecY = Math.cos(rad)
-
-  const speed = data.distance * 0.0006;
-
-  const speed_x = vecX*speed ;   // 距離（スティックの傾き強さ）
-  const speed_y = vecY*speed ;   // 距離（スティックの傾き強さ）
-  
-  // 水平方向の回転量
-  lookVector.x = speed_x
-  // 垂直方向の回転量
-  lookVector.y = speed_y
-
-});
-
-joystickLook.on('end', () => {
-  lookVector.x = 0;
-  lookVector.y = 0;
-});
-
 // ========== アニメーションループ ========== //
+
+let key = '0'
+document.addEventListener('keydown', (e) => {
+  key = e.key.toLowerCase();
+});
+
 function animate() {
   requestAnimationFrame(animate);
+
+  // console.log(b6dm.rotation)
 
   const moveSpeed = baseSpeed;
 
   // キーボード移動処理
   const strafe = (keys['a'] ? 1 : 0) - (keys['d'] ? 1 : 0);
   const forward = (keys['w'] ? 1 : 0) - (keys['s'] ? 1 : 0);
-
+    
   // 数字キー押下で倍率設定
   if (key >= '1' && key <= '9') {
-    baseSpeed = (parseInt(key, 10) **3)*0.005;
+    baseSpeed = parseInt(key, 10) * (parseInt(key, 10) *0.05);
   }
   // 0キーで倍率リセット
   else if (key === '0') {
     baseSpeed = moveSpeed;
   }
 
-  // カメラ角度による方向ベクトル
-  const camX = Math.sin(cameraAngleY);
-  const camZ = Math.cos(cameraAngleY);
-
   // 横移動
   camera.position.x += Math.sin(cameraAngleY + Math.PI / 2) * moveSpeed * strafe;
   camera.position.z += Math.cos(cameraAngleY + Math.PI / 2) * moveSpeed * strafe;
 
   // 前後移動
-  camera.position.x += camX * moveSpeed * forward;
-  camera.position.z += camZ * moveSpeed * forward;
+  camera.position.x += Math.sin(cameraAngleY) * moveSpeed * forward;
+  camera.position.z += Math.cos(cameraAngleY) * moveSpeed * forward;
 
   // スティック入力（カメラ基準移動）
-  camera.position.x += moveVector.x * moveSpeed;
-  camera.position.z += moveVector.y * moveSpeed;
+  // camera.position.x += moveVector.x * moveSpeed;
+  // camera.position.z += moveVector.y * moveSpeed;
 
   if (speedUp) {
     if (baseSpeed === 0.1){
@@ -1830,8 +2475,6 @@ function animate() {
   // カメラ注視点の更新
   // rightStickVector.x → 左右方向（横回転に使う）
   // rightStickVector.y → 上下方向（縦回転に使う）
-  cameraAngleY += lookVector.x;
-  cameraAngleX += lookVector.y;
 
   // ピッチ制限（上下の角度が大きくなりすぎないように）
   cameraAngleX = Math.min(pitchLimit, Math.max(-pitchLimit, cameraAngleX));
@@ -1843,222 +2486,48 @@ function animate() {
     Math.cos(cameraAngleY) * Math.cos(cameraAngleX)
   );
 
-  const target = new THREE.Vector3().addVectors(camera.position, direction);
-  camera.lookAt(target);
+  camera.lookAt(new THREE.Vector3().addVectors(camera.position, direction));
 
-  renderer.render(scene, camera);
+  // メインカメラ：画面全体
+  renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+  renderer.setScissor(0, 0, window.innerWidth, window.innerHeight);
+  renderer.setScissorTest(true);
+
+  renderer.render(scene, camera); 
+
+  if (dragging){
+    const pos = choice_object.position
+    cameraSub.position.set(pos.x-Math.sin(cameraAngleY)*0.2,pos.y+5,pos.z-Math.cos(cameraAngleY)*0.2)
+
+    cameraSub.lookAt(pos.x,pos.y,pos.z)
+    // サブカメラ：画面右下に小さく表示
+    const insetWidth = window.innerWidth / 4;  // 画面幅の1/4サイズ
+    const insetHeight = window.innerHeight / 4; // 画面高の1/4サイズ
+    const insetX = 10; // 右下から10pxマージン
+    const insetY = window.innerHeight - insetHeight - 10; // 下から10pxマージン
+
+    renderer.setViewport(insetX, insetY, insetWidth, insetHeight);
+    renderer.setScissor(insetX, insetY, insetWidth, insetHeight);
+    renderer.setScissorTest(true);
+    
+    if (!move_direction_y){
+      GuideGrid_Center_x.position.copy(choice_object.position)
+      GuideGrid_Center_x.visible = true
+      GuideGrid_Center_z.position.copy(choice_object.position)
+      GuideGrid_Center_z.visible = true
+    }
+    renderer.render(scene, cameraSub);
+    if (!move_direction_y){
+      GuideGrid_Center_x.visible = false
+      GuideGrid_Center_z.visible = false
+    }
+  }
 }
 
 animate();
 
 // // -----------------------------------------------------------------------------
 
-// --- マップの手動作成(駅舎設定) ---
-
-const ceiling_Spacing = (train_width+car_Spacing) +2
-const beam_Spacing = ceiling_Spacing/9
-const Podium_deck_width = ceiling_Spacing*5 + beam_Spacing*3
-
-function object_update({
-  ins_obj = NaN,
-  ins_idx = NaN,
-  pos_x = NaN,
-  pos_y = NaN,
-  pos_z = NaN,
-  rot_x = NaN,
-  rot_y = NaN,
-  rot_z = NaN,
-  scale = NaN} = {}) {
-    
-    const dummy = new THREE.Object3D();
-    // 位置の更新
-    if (!Number.isNaN(pos_x)) dummy.position.x = pos_x;
-    if (!Number.isNaN(pos_y)) dummy.position.y = pos_y;
-    if (!Number.isNaN(pos_z)) dummy.position.z = pos_z;
-
-    // 回転の更新
-    if (!Number.isNaN(rot_x)) dummy.rotation.x = rot_x;
-    if (!Number.isNaN(rot_y)) dummy.rotation.y = rot_y;
-    if (!Number.isNaN(rot_z)) dummy.rotation.z = rot_z;
-
-    // スケールの更新
-    if (!Number.isNaN(scale)) dummy.scale.setScalar(scale);
-
-    dummy.updateMatrix();                       // 行列計算更新
-    ins_obj.setMatrixAt(ins_idx, dummy.matrix); // i番目のインスタンスに行列を適用
-    ins_obj.instanceMatrix.needsUpdate = true;  // 更新フラグ
-  }
-
-if (true) {
-
-  // 鉄のような金属マテリアル設定
-  const metalParams = {
-    color: 0x999999,      // 明るめのグレー（鉄色）
-    metalness: 0.3,       // 金属光沢最大
-    roughness: 0.25,      // 少しザラザラ（低くするとツルツル）
-    envMapIntensity: 1.0,    // 環境マップの反射強度（envMapを使うなら）
-    side: THREE.FrontSide,
-  };
-
-  // 鉄のような金属マテリアル設定
-  const metalParams_2 = {
-    color: 0xffffff,      // 暗めのグレー（鉄色）
-    metalness: 0.5,       // 金属光沢最大
-    roughness: 0.0,       // 少しザラザラ（低くするとツルツル）
-    envMapIntensity: 1.0,    // 環境マップの反射強度（envMapを使うなら）
-    side: THREE.FrontSide,
-  };
-
-  // 1. 天井本体（Mesh）
-  const ceilingGeometry = new THREE.BoxGeometry(10, 0.1, Podium_deck_width);
-  const ceilingMaterial = new THREE.MeshStandardMaterial({...metalParams});
-  const ceilingMesh = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
-
-  let geometry = NaN
-  let material = NaN
-
-  // 2. 柱（縦方向ビーム）
-  geometry = new THREE.BoxGeometry(0.05, 1, Podium_deck_width);
-  material = new THREE.MeshStandardMaterial({...metalParams});
-  const beam_pillar = new THREE.InstancedMesh(geometry, material, 10);
-
-  // 3. 柱（横方向ビーム）
-  geometry = new THREE.BoxGeometry(0.05, 1, 10);
-  material = new THREE.MeshStandardMaterial({...metalParams});
-  const count = 49;
-  const beam_pillar_2 = new THREE.InstancedMesh(geometry, material, count);
-
-  // 4. 鉄骨梁（縦）
-  geometry = new THREE.BoxGeometry(0.15, 0.05, Podium_deck_width);
-  material = new THREE.MeshStandardMaterial({...metalParams});
-  const beam = new THREE.InstancedMesh(geometry, material, 10);
-
-  // 5. 鉄骨梁（横）
-  geometry = new THREE.BoxGeometry(0.15, 0.05, 10);
-  material = new THREE.MeshStandardMaterial({...metalParams});
-  const beam_2 = new THREE.InstancedMesh(geometry, material, count);
-
-  // 6. 小天井板（パーツ）
-  geometry = new THREE.BoxGeometry(beam_Spacing, 0.05, 10);
-  material = new THREE.MeshStandardMaterial({...metalParams});
-  const ceiling = new THREE.InstancedMesh(geometry, material, 6);
-
-  // 7. 柱
-  const radiusTop = 0.3;     // 上面の半径
-  const radiusBottom = 0.3;  // 下面の半径
-  const height = 3;          // 高さ
-  const radialSegments = 32; // 円周方向の分割数
-
-  geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, radialSegments);
-  material = new THREE.MeshStandardMaterial({...metalParams});
-  const cylinder = new THREE.InstancedMesh(geometry, material, 12);
-  
-  // 8. 支柱
-  const radiusTop_2 = 0.01;    // 上面の半径
-  const radiusBottom_2 = 0.01; // 下面の半径
-  const height_2 = 0.5;        // 高さ
-  const radialSegments_2 = 5;  // 円周方向の分割数
-
-  geometry = new THREE.CylinderGeometry(radiusTop_2, radiusBottom_2, height_2, radialSegments_2);
-  material = new THREE.MeshStandardMaterial({...metalParams_2});
-  const prop = new THREE.InstancedMesh(geometry, material, 376);
-
-  // 9. 小天井板（パーツ）
-  geometry = new THREE.BoxGeometry(Podium_deck_width, 0.04, 0.3);
-  material = new THREE.MeshStandardMaterial({...metalParams});
-  const board = new THREE.InstancedMesh(geometry, material, 4);
-
-  // 光源の追加
-  function createPointLight(color = 0xffffff, intensity = 1, distance = 100, position = [0, 10, 0]) {
-    const light = new THREE.PointLight(color, intensity, distance);
-    light.position.set(...position);
-    scene.add(light);
-    return light;
-  }  
-
-  let beam_y = 9.4
-  let beam_z = 20
-  object_update({ins_obj: beam_pillar, ins_idx: 0, pos_x: 5.5,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // | : : : : : : :
-  object_update({ins_obj: beam_pillar, ins_idx: 1, pos_x: 4,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // : | : : : : : :
-  object_update({ins_obj: beam_pillar, ins_idx: 2, pos_x: 2.8,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // : : | : : : : :
-  object_update({ins_obj: beam_pillar, ins_idx: 3, pos_x: 1.7,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // : : | : : : : :
-  object_update({ins_obj: beam_pillar, ins_idx: 4, pos_x: 0.6,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // : : : | : : : :
-  object_update({ins_obj: beam_pillar, ins_idx: 5, pos_x: -0.6, pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // : : : : | : : :
-  object_update({ins_obj: beam_pillar, ins_idx: 6, pos_x: -1.7, pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // : : : : : | : :
-  object_update({ins_obj: beam_pillar, ins_idx: 7, pos_x: -2.9,   pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // : : : : : : | : 
-  object_update({ins_obj: beam_pillar, ins_idx: 8, pos_x: -4,   pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // : : : : : : | :
-  object_update({ins_obj: beam_pillar, ins_idx: 9, pos_x: -4.5, pos_y: beam_y+0.5, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})  // : : : : : : : |
-
-  beam_y -= 0.5
-  object_update({ins_obj: beam, ins_idx: 0, pos_x: 5.5,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam, ins_idx: 1, pos_x: 4,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam, ins_idx: 2, pos_x: 2.8,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})      // : : | : : : : :
-  object_update({ins_obj: beam, ins_idx: 3, pos_x: 1.7,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam, ins_idx: 4, pos_x: 0.6,  pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam, ins_idx: 6, pos_x: -0.6, pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam, ins_idx: 5, pos_x: -1.7, pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam, ins_idx: 7, pos_x: -2.9,   pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam, ins_idx: 8, pos_x: -4,   pos_y: beam_y, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-  object_update({ins_obj: beam, ins_idx: 9, pos_x: -4.5, pos_y: beam_y+0.5, pos_z: beam_z, rot_x: NaN, rot_y: NaN, rot_z: NaN,scale: NaN})
-
-
-  beam_y += 0.5
-  const Podium_deck_start = Podium_deck_width/2
-  for (let i = 0; i < 49; i++) {
-    object_update({ins_obj: beam_pillar_2, ins_idx: i, pos_x: 0.5, pos_y: beam_y, pos_z: beam_z-Podium_deck_start + i*beam_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: beam_2, ins_idx: i, pos_x: 0.5, pos_y: beam_y-0.5, pos_z: beam_z-Podium_deck_start + i*beam_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-  }
-
-  const Light_Spot_margin = ceiling_Spacing/2
-  for (let i = 0; i < 6; i++) {
-    object_update({ins_obj: ceiling,  ins_idx: i, pos_x: 0.5, pos_y: beam_y-0.5, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*ceiling_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: cylinder, ins_idx: i*2, pos_x: 2.8, pos_y: beam_y-1.5, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*ceiling_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: cylinder, ins_idx: i*2+1, pos_x: -2.9, pos_y: beam_y-1.5, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*ceiling_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    createPointLight(0xffffff, 10, 10, [2.55, beam_y-1.05, beam_z-Podium_deck_start+ beam_Spacing/2*3 - ceiling_Spacing/4 + Light_Spot_margin + i*ceiling_Spacing]);
-    createPointLight(0xffffff, 10, 10, [2.55, beam_y-1.05, beam_z-Podium_deck_start+ beam_Spacing/2*3 - ceiling_Spacing/4 + Light_Spot_margin*2 + i*ceiling_Spacing]);
-    createPointLight(0xffffff, 10, 10, [-2.9, beam_y-1.05, beam_z-Podium_deck_start+ beam_Spacing/2*3 - ceiling_Spacing/4 + Light_Spot_margin + i*ceiling_Spacing]);
-    createPointLight(0xffffff, 10, 10, [-2.9, beam_y-1.05, beam_z-Podium_deck_start+ beam_Spacing/2*3 - ceiling_Spacing/4 + Light_Spot_margin*2 + i*ceiling_Spacing]);
-  }
-
-  for (let i = 0; i < 47; i++){
-    // 3.5
-    object_update({ins_obj: prop, ins_idx: i*8,   pos_x: 4.05, pos_y: beam_y-0.8, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*beam_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: prop, ins_idx: i*8+1, pos_x: 3.95, pos_y: beam_y-0.8, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*beam_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    // 1.7
-    object_update({ins_obj: prop, ins_idx: i*8+2, pos_x: 1.75, pos_y: beam_y-0.8, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*beam_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: prop, ins_idx: i*8+3, pos_x: 1.65, pos_y: beam_y-0.8, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*beam_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    // -2.1
-    object_update({ins_obj: prop, ins_idx: i*8+4, pos_x: -1.65, pos_y: beam_y-0.8, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*beam_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: prop, ins_idx: i*8+5, pos_x: -1.75, pos_y: beam_y-0.8, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*beam_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    // -4
-    object_update({ins_obj: prop, ins_idx: i*8+6, pos_x: -3.95, pos_y: beam_y-0.8, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*beam_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: prop, ins_idx: i*8+7, pos_x: -4.05, pos_y: beam_y-0.8, pos_z: beam_z-Podium_deck_start+beam_Spacing/2*3 + i*beam_Spacing, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-  }
-
-  for (let i = 0; i < 4; i++){
-    object_update({ins_obj: board, ins_idx: i*4,   pos_x: 4,  pos_y: beam_y-1.05, pos_z: beam_z, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: board, ins_idx: i*4+1, pos_x: 1.7,  pos_y: beam_y-1.05, pos_z: beam_z, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: board, ins_idx: i*4+2, pos_x: -1.7, pos_y: beam_y-1.05, pos_z: beam_z, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-    object_update({ins_obj: board, ins_idx: i*4+3, pos_x: -4,   pos_y: beam_y-1.05, pos_z: beam_z, rot_x: NaN, rot_y: Math.PI/2, rot_z: NaN,scale: NaN})
-  }
-
-  // 4. 配置（位置の設定）
-  ceilingMesh.position.set(0.5, beam_y+0.5, beam_z); // 高さ12に配置（天井）
-  // 5. シーンに追加
-  scene.add(ceilingMesh);
-  scene.add(ceiling);
-
-  scene.add(beam_pillar);
-  scene.add(beam);
-
-  scene.add(beam_pillar_2);
-  scene.add(beam_2);
-
-  scene.add(cylinder);
-  scene.add(prop);
-  scene.add(board)
-
-}
 
 // -------------------------------------------------------------------------
 cameraAngleY
@@ -2123,10 +2592,24 @@ function stopFrontView() {
   }
 }
 
-const buttons = document.querySelectorAll(".frontViewBtn");
+const fbuttons = document.querySelectorAll(".frontViewBtn");
 
-buttons.forEach(button => {
+fbuttons.forEach(button => {
   button.addEventListener("click", () => {
+    const trainNum = parseInt(button.dataset.train);
+    const selectedCar = trainCars[trainNum];
+
+    if (!frontViewActive || currentTrainCar !== selectedCar) {
+      stopFrontView(); // 他の列車からの切り替え対応
+      startFrontView(selectedCar);
+      updateButtonLabels(trainNum);
+    } else {
+      stopFrontView();
+      updateButtonLabels(null);
+    }
+  });
+
+  button.addEventListener("touchstart", () => {
     const trainNum = parseInt(button.dataset.train);
     const selectedCar = trainCars[trainNum];
 
@@ -2142,7 +2625,7 @@ buttons.forEach(button => {
 });
 
 function updateButtonLabels(activeTrainNum) {
-  buttons.forEach(button => {
+  fbuttons.forEach(button => {
     const num = parseInt(button.dataset.train);
     if (num === activeTrainNum) {
       button.textContent = `${num}番線 🚫 停止`;
@@ -2152,249 +2635,4 @@ function updateButtonLabels(activeTrainNum) {
   });
 }
 
-const group = new THREE.Group();
-
-// 円弧Aのパラメータ
-const arcA = {
-  radius: 29,
-  rangeDeg: 65,
-  stepDeg: 16,
-  thickness: 0.4,
-  depth: 0.5,
-  color: 0x996633,
-  centerOffset: new THREE.Vector3(5, 0, 0),
-  rotationOffset: 90 * Math.PI / 180
-};
-
-// 円弧Bのパラメータ
-const arcB = {
-  radius: 25.2,
-  rangeDeg: 85,
-  stepDeg: 16,
-  thickness: 0.4,
-  depth: 0.5,
-  color: 0x336699,
-  centerOffset: new THREE.Vector3(5, 3, 0),
-  rotationOffset: 90 * Math.PI / 180
-};
-
-function createBoxBetweenPoints(x1, y1, x2, y2, thickness, depth, material) {
-  // 長さと角度
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const length = Math.sqrt(dx * dx + dy * dy);
-  const angle = Math.atan2(dy, dx);
-
-  // 中心位置
-  const centerX = (x1 + x2) / 2;
-  const centerY = (y1 + y2) / 2;
-
-  // Box Geometry（幅＝length、厚み、奥行き）
-  const geometry = new THREE.BoxGeometry(length, thickness, depth);
-  const mesh = new THREE.Mesh(geometry, material);
-
-  // 平面上での回転（Z軸回転でX-Yに合わせる）
-  mesh.rotation.z = angle;
-
-  // 配置
-  mesh.position.set(centerX, centerY, 0); // zは0平面に
-  return mesh;
-}
-
-function createBoxBetweenPoints3D(p1, p2, thickness, depth, material) {
-  const dir = new THREE.Vector3().subVectors(p2, p1); // 方向ベクトル
-  const length = dir.length(); // 距離（ボックスの長さ）
-  const center = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5); // 中心点
-
-  const geometry = new THREE.BoxGeometry(length, thickness, depth);
-  const mesh = new THREE.Mesh(geometry, material);
-
-  // デフォルトのボックスはX軸方向に長い → 回転してdir方向に合わせる
-  const quaternion = new THREE.Quaternion();
-  quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), dir.clone().normalize());
-  mesh.quaternion.copy(quaternion);
-
-  mesh.position.copy(center);
-  return mesh;
-}
-
-function createDoubleArcPoints(params1, params2) {
-  const Bridge = new THREE.Group()
-  const Bridge_beam = new THREE.Group()
-
-  const rangeRad1 = (params1.rangeDeg * Math.PI) / 180;
-  const segments1 = params1.stepDeg;
-  const halfRangeX1 = params1.radius * Math.sin(rangeRad1 / 2);
-  const xStart1 = -halfRangeX1;
-  const xEnd1 = halfRangeX1;
-  const stepX1 = (xEnd1 - xStart1) / segments1;
-
-  const rangeRad2 = (params2.rangeDeg * Math.PI) / 180;
-  const segments2 = params2.stepDeg;
-  const halfRangeX2 = params2.radius * Math.sin(rangeRad2 / 2);
-  const xStart2 = -halfRangeX2;
-  const xEnd2 = halfRangeX2;
-  const stepX2 = (xEnd2 - xStart2) / segments2;
-
-  const material = new THREE.MeshStandardMaterial({//color: 0x3399cc 
-    color: 0xffffff,      // 暗めのグレー（鉄色）
-    metalness: 0.8,       // 金属光沢最大
-    roughness: 0.5,       // 少しザラザラ（低くするとツルツル）
-    envMapIntensity: 1.0,    // 環境マップの反射強度（envMapを使うなら）
-    side: THREE.FrontSide,
-  });
-
-  const x1 = xStart1 + 1 * stepX1;
-  const y1 = Math.sqrt(params1.radius ** 2 - x1 ** 2) + params1.centerOffset.y;
-  const x2 = xStart1 + 2 * stepX1;
-
-  const x1_b = xStart2 + 1 * stepX2;
-  const y1_b = Math.sqrt(params2.radius ** 2 - x1_b ** 2) + params2.centerOffset.y;
-
-  const x2_b = xStart2 + 2 * stepX2;
-  const y2_b = Math.sqrt(params2.radius ** 2 - x2_b ** 2) + params2.centerOffset.y;
-
-  const beam_x = x2;
-  const beam_y = y2_b;
-
-  const box = createBoxBetweenPoints3D(
-    new THREE.Vector3(x1, y1, 0),
-    new THREE.Vector3(x1, y1_b, 0),
-    0.3, 0.3, material
-  );
-  Bridge.add(box);
-
-  const Bridge_depth = 3.5
-
-  for (let i = 1; i < Math.max(segments1, segments2) - 1; i++) {
-    let x1 = xStart1 + i * stepX1;
-    const y1 = Math.sqrt(params1.radius ** 2 - x1 ** 2) + params1.centerOffset.y;
-  
-    let x2 = xStart1 + (i + 1) * stepX1;
-    const y2 = Math.sqrt(params1.radius ** 2 - x2 ** 2) + params1.centerOffset.y;
-
-    const box = createBoxBetweenPoints3D(
-      new THREE.Vector3(x2, y2, 0),
-      new THREE.Vector3(x1, y1, 0),
-      0.3, 0.3, material
-    );
-    Bridge.add(box);
-
-    const x1_b = xStart2 + i * stepX2;
-    const y1_b = Math.sqrt(params2.radius ** 2 - x1_b ** 2) + params2.centerOffset.y;
-
-    const x2_b = xStart2 + (i + 1) * stepX2;
-    const y2_b = Math.sqrt(params2.radius ** 2 - x2_b ** 2) + params2.centerOffset.y;
-
-    const box2 = createBoxBetweenPoints3D(
-      new THREE.Vector3(x1, y1_b, 0),
-      new THREE.Vector3(x2, y2_b, 0),
-      0.3, 0.3, material
-    );
-    Bridge.add(box2);
-
-    if (i < (Math.max(segments1, segments2) - 1) / 2) {
-      const box3 = createBoxBetweenPoints3D(
-        new THREE.Vector3(x1, y1, 0),
-        new THREE.Vector3(x2, y2_b, 0),
-        0.2, 0.2, material
-      );
-      Bridge.add(box3);
-      if (i>2){
-        const box3_1 = createBoxBetweenPoints3D(
-          new THREE.Vector3(x1, y1, 0),
-          new THREE.Vector3(x2, y2, Bridge_depth*0.5),
-          0.1, 0.1, material
-        );
-        const box3_2 = createBoxBetweenPoints3D(
-          new THREE.Vector3(x1, y1, Bridge_depth),
-          new THREE.Vector3(x2, y2, Bridge_depth*0.5),
-          0.1, 0.1, material
-        );
-        Bridge_beam.add(box3_1)
-        Bridge_beam.add(box3_2)
-      }
-    } else {
-      const box3 = createBoxBetweenPoints3D(
-        new THREE.Vector3(x2, y2, 0),
-        new THREE.Vector3(x1, y1_b, 0),
-        0.2, 0.2, material
-      );
-      Bridge.add(box3);
-      if (i<Math.max(segments1, segments2) - 3){
-        const box3_1 = createBoxBetweenPoints3D(
-          new THREE.Vector3(x1, y1, Bridge_depth*0.5),
-          new THREE.Vector3(x2, y2, 0),
-          0.1, 0.1, material
-        );
-        const box3_2 = createBoxBetweenPoints3D(
-          new THREE.Vector3(x1, y1, Bridge_depth*0.5),
-          new THREE.Vector3(x2, y2, Bridge_depth),
-          0.1, 0.1, material
-        );
-      
-        Bridge_beam.add(box3_1)
-        Bridge_beam.add(box3_2)
-      }
-    }
-
-    const box4 = createBoxBetweenPoints3D(
-      new THREE.Vector3(x2, y2, 0),
-      new THREE.Vector3(x2, y2_b, 0),
-      0.2, 0.2, material
-    );
-    Bridge.add(box4);
-
-    if (i>2&&i<Math.max(segments1, segments2) - 3){
-      const box4_1 = createBoxBetweenPoints3D(
-        new THREE.Vector3(x1, y1, Bridge_depth),
-        new THREE.Vector3(x1, y1, 0),
-        0.1, 0.1, material
-      );
-      Bridge_beam.add(box4_1)
-    }
-
-    const box5 = createBoxBetweenPoints3D(
-      new THREE.Vector3(x2, y2, 0),
-      new THREE.Vector3(x2, beam_y, 0),
-      0.2, 0.2, material
-    );
-    Bridge.add(box5);
-
-    if (i === (Math.max(segments1, segments2) - 4)){
-      const box6 = createBoxBetweenPoints3D(
-        new THREE.Vector3(x2, y2, Bridge_depth),
-        new THREE.Vector3(x2, y2, 0),
-        0.2, 0.2, material
-      );
-      Bridge_beam.add(box6);
-  
-    }
-
-    if (i === (Math.max(segments1, segments2) - 2)) {
-      const box5 = createBoxBetweenPoints3D(
-        new THREE.Vector3(beam_x, beam_y, 0),
-        new THREE.Vector3(x1, y1_b, 0),
-        0.3, 0.3, material
-      );
-      Bridge.add(box5);
-    
-    }
-
-  }
-
-  const Bridge2 = Bridge.clone();
-  Bridge2.position.z += Bridge_depth
-  const ArchBridge = new THREE.Group()
-  ArchBridge.add(Bridge)
-  ArchBridge.add(Bridge2)
-  ArchBridge.add(Bridge_beam)
-  return ArchBridge
-}
-const ArchBridge = createDoubleArcPoints(arcA, arcB)
-ArchBridge.position.set(-6.2,-17,-145)
-ArchBridge.rotation.y = 107 * Math.PI / 180
-scene.add(ArchBridge)
-
-console.log(line_2.points[0])
-console.log(line_2.points[1])
+WorldCreat(scene, train_width, car_Spacing)

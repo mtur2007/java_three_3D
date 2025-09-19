@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>Three.js 街デモ</title>
+  <title>Three.js 駅デモ</title>
   <style>body { margin: 0; overflow: hidden; }</style>
 
   <!-- Google Analytics 設定 閲覧数の測定用です。-->
@@ -22,8 +22,6 @@
   </script>
 </head>
 <body>
-  <div id="joystick-left" class="joystick-zone"></div>
-  <div id="joystick-right" class="joystick-zone"></div>
 
   <style>
     
@@ -113,51 +111,30 @@
   .control-button:active {
     filter: brightness(70%);
   }
-</style>
 
-  </style>
-  
-  <button id="speed-up" class="control-button" style="left: 20px; bottom: 200px;">▶︎▷</button>
-  <button id="speed-down" class="control-button" style="left: 95px; bottom: 200px;">◀︎◁</button>
-  <button id="btn-up" class="control-button" style="left: 20px; bottom: 120px;">🔺</button>
-  <button id="btn-down" class="control-button" style="left: 20px; bottom: 40px;">🔻</button>
-      
-  <!-- 左スティック（左下に表示） -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.8.6/nipplejs.min.js"></script>
-  <div id="left-stick" style="user-select: none; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; position: fixed; left: 7vw; bottom: 0; width: 40vw; height: 60vh; z-index: 10;"></div>
-  <div id="right-stick" style="user-select: none; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; position: fixed; right: 7vw; bottom: 0; width: 40vw; height: 60vh; z-index: 10;"></div>
+  /* アイコンの重ねラッパー */
+  .icon-wrapper {
+    position: relative;
+    display: flex;              /* 中央寄せ用 */
+    align-items: center;        /* 縦中央 */
+    justify-content: center;    /* 横中央 */
+    width: 2em;                 /* ボタンに合わせて大きめに */
+    height: 2em;
+    }
 
-  <button id="toggle-crossover" class="control-square-button" style="
+  /* 薄い背景記号 */
+  .background-icon {
     position: absolute;
-    left: 20px;
-    top: 20px;
-    padding: 10px;
-    font-size: 14px;
-    z-index: 10;
-    backdrop-filter: blur(4px); /* iOSっぽいガラス感 */
-    ">ランダム立体交差（クアトロ交差）切替</button>
-
-  <div id="frontViewButtons" style="position: fixed; top: 20px; right: 20px; z-index: 100;">
-    <button class="frontViewBtn" data-train="1">1番線</button>
-    <button class="frontViewBtn" data-train="2">2番線</button>
-    <button class="frontViewBtn" data-train="3">3番線</button>
-    <button class="frontViewBtn" data-train="4">4番線</button>
-  </div>
+    color: rgba(0, 0, 0, 0.5);
+    font-size: 1.5em;
+  }
+  /* 濃い前面記号 */
+  .foreground-icon {
+    position: absolute;
+    color: black;
+    font-size: 1.3em;
+  }
   
-  <!-- 🌞 昼夜切り替えボタン -->
-  <button id="toggle-daynight" style="
-    position: fixed;
-    top: 70px;
-    left: 20px;
-    z-index: 10;
-    padding: 10px 15px;
-    font-size: 16px;
-    border-radius: 8px;
-  ">🌙 夜にする</button>
-  
-  <script type="module" src="js/main.js"></script>
-</body>
-<style>
   .credits-footer {
     position: fixed;
     left: 0;
@@ -172,13 +149,93 @@
   }
   .credits-footer a { color: #0645ad; text-decoration: underline; }
 </style>
-<footer class="credits-footer" role="contentinfo" aria-label="出典情報">
-  <small>
-    データ: PLATEAU（国土交通省）「PLATEAU 3D City Model — 千代田区（建物）」 (CC BY 4.0). 元データ: 
-    <a href="https://plateauview.mlit.go.jp/" target="_blank" rel="noopener noreferrer">PLATEAU VIEW</a>. 
-    ビジュアライズ: <a href="https://threejs.org/" target="_blank" rel="noopener noreferrer">three.js (r0.169.0, MIT)</a>. 
-    変換: <a href="https://github.com/Project-PLATEAU/PLATEAU-GIS-Converter" target="_blank" rel="noopener noreferrer">PLATEAU GIS Converter</a>（release v0.1.2、ダウンロード日: 2025-09-19）。
-  </small>
-</footer>
 
+  </style>
+  
+  <button id="speed-up" class="control-button" style="left: 20px; bottom: 200px;">▶︎▷</button>
+  <button id="speed-down" class="control-button" style="left: 95px; bottom: 200px;">◀︎◁</button>
+  <button id="btn-up" class="control-button" style="left: 20px; bottom: 120px;">🔺</button>
+  <button id="btn-down" class="control-button" style="left: 20px; bottom: 40px;">🔻</button>
+      
+  <!-- 左スティック（左下に表示） -->
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.8.6/nipplejs.min.js"></script>
+  <div id="left-stick" style="user-select: none; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; position: fixed; left: 7vw; bottom: 0; width: 40vw; height: 60vh; z-index: 10;"></div>
+  <div id="right-stick" style="user-select: none; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; position: fixed; right: 7vw; bottom: 0; width: 40vw; height: 60vh; z-index: 10;"></div> -->
+
+  <!-- モード切り替え -->
+
+  <button id="mode-change" class="control-button" style="right: 20px; top: 40px;">
+    <span class="icon-wrapper">
+      <span class="background-icon">🌐</span>
+      <span class="foreground-icon">🛠️</span>
+    </span>
+  </button>
+
+  <button id="edit-rotation" class="control-button" style="right: 20px; bottom: 40px;"> 
+    <span class="icon-wrapper">
+      <span class="background-icon">⏥</span>
+      <span class="foreground-icon">⤮</span>
+    </span>
+  </button>
+
+  <button id="create-pole" class="control-button" style="right: 95px; top: 40px; display: none;">
+    <span class="icon-wrapper">
+      <span class="background-icon"></span>
+      <span class="foreground-icon">⚡️</span>
+    </span>
+  </button>
+
+  <button id="draw-track" class="control-button" style="right: 170px; top: 40px; display: none;">
+    <span class="icon-wrapper">
+      <span class="background-icon"></span>
+      <span class="foreground-icon">🛤️</span>
+    </span>
+  </button>
+
+  <button id="track-create-new" class="control-button" style="right: 170px; top: 115px; display: none;">➕</button>
+  <button id="track-move-existing" class="control-button" style="right: 170px; top: 190px; display: none;">↔️</button>
+
+  <button id="toggle-crossover" class="control-square-button" style="
+    position: absolute;
+    left: 20px;
+    top: 20px;
+    padding: 10px;
+    font-size: 14px;
+    z-index: 10;
+    backdrop-filter: blur(4px); /* iOSっぽいガラス感 */
+    ">ランダム立体交差（クアトロ交差）切替</button> 
+
+  <div id="frontViewButtons" style="position: fixed; top: 20px; right: 20px; z-index: 100;">
+    <button class="frontViewBtn" data-train="1">1番線</button>
+    <button class="frontViewBtn" data-train="2">2番線</button>
+    <button class="frontViewBtn" data-train="3">3番線</button>
+    <button class="frontViewBtn" data-train="4">4番線</button>
+  </div>
+  
+  
+  <!-- 🌞 昼夜切り替えボタン -->
+  <button id="toggle-daynight" style="
+    position: fixed;
+    top: 70px;
+    left: 20px;
+    z-index: 10;
+    padding: 10px 15px;
+    font-size: 16px;
+    border-radius: 8px;
+  ">🌙 夜にする</button>
+  
+  <footer class="credits-footer" role="contentinfo" aria-label="出典情報">
+    <small>
+      データ: PLATEAU（国土交通省: 
+      <a href="https://plateauview.mlit.go.jp/" target="_blank" rel="noopener noreferrer">PLATEAU VIEW</a>. 
+      ビジュアライズ: <a href="https://threejs.org/" target="_blank" rel="noopener noreferrer">three.js (r0.169.0, MIT)</a>. 
+      変換: <a href="https://github.com/Project-PLATEAU/PLATEAU-GIS-Converter" target="_blank" rel="noopener noreferrer">PLATEAU GIS Converter</a>（release v0.1.2、ダウンロード日: 2025-09-19）。
+    </small>
+  </footer>
+  
+  <canvas id="three-canvas"></canvas>
+  
+  <script type="module" src="js/main.js"></script>
+
+</body>
 </html>
