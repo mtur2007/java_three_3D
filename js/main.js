@@ -1902,6 +1902,7 @@ function getIntersectObjects(){
   return raycaster.intersectObjects(targetObjects, true);
 };
 
+let TargetDiff = [0,0]
 // 毎フレーム時に実行されるループイベントです
 async function search_point() {
   
@@ -1962,7 +1963,7 @@ function coord_DisplayTo3D(Axis_num=false){
     raycaster.setFromCamera(mouse, camera);
     const dir = raycaster.ray.direction
 
-    const t = Math.abs((camera.position.y - set_y)/dir.y)
+    const t = Math.abs((pos.y - set_y)/dir.y)
     
     // 交点を計算
     point = new THREE.Vector3(
@@ -2008,6 +2009,8 @@ function coord_DisplayTo3D(Axis_num=false){
     );
   }
 
+  point.x += TargetDiff[0]
+  point.z += TargetDiff[1]
   return point
 }
 
@@ -2093,6 +2096,23 @@ async function handleMouseDown() {
   // 通常のオブジェクト選択・移動モード
   if (choice_object != false && objectEditMode === 'MOVE_EXISTING'){
     if (search_object){
+      
+      const pos = camera.position
+      let set_y = choice_object.position.y
+
+      raycaster.setFromCamera(mouse, camera);
+      const dir = raycaster.ray.direction
+
+      const t = Math.abs((pos.y - set_y)/dir.y)
+      
+      // 交点を計算
+      TargetDiff = [
+        choice_object.position.x - (pos.x + dir.x * t),
+        choice_object.position.z - (pos.z + dir.z * t)
+      ];
+
+      console.log(TargetDiff)
+
       search_object = false
       choice_object.material.color.set(0x0000ff)
       
