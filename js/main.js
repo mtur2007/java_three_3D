@@ -2340,29 +2340,27 @@ let lastDistance = 0;
 
 const ctrlX = 160
 const ctrlY = canvas.height - 60 - 80
-console.log(canvas.height)
-680
 
 let ctrl_num = 0
 
 function search_ctrl_num(touches){
   for(let i = 0; i < touches.length; i++){
-    if (100 > Math.sqrt((ctrlX-touches[i].clientX)**2 + (ctrlY-touches[i].clientY)**2)){
+    if (40 > Math.sqrt((ctrlX-touches[i].clientX)**2 + (ctrlY-touches[i].clientY)**2)){
       return i
     }
   }
   return null
 }
 
-canvas.addEventListener('touchstart', (e) => {
+document.addEventListener('touchstart', (e) => {
   ctrl_num = search_ctrl_num(e.touches)
   lastPosition1 = { x: e.touches[0].clientX, y: e.touches[0].clientY }
 }, { passive: false });
 
-canvas.addEventListener('touchmove', (e) => {
+document.addEventListener('touchmove', (e) => {
 
   // e.preventDefault();
-  e.preventDefault();
+  // e.preventDefault();
 
   // Update mouse vector for raycasting (from handleMouseMove)
   handleMouseMove(e.touches[0].clientX, e.touches[0].clientY);
@@ -2416,7 +2414,7 @@ canvas.addEventListener('touchmove', (e) => {
   }
 });
 
-canvas.addEventListener('touchend',()=>{
+document.addEventListener('touchend',()=>{
   moveVectorX = 0;
   moveVectorZ = 0;
 }
@@ -2526,10 +2524,10 @@ function animate() {
 
   // 上下移動（Q/Eキー）
   if (keys['q'] || moveUp) {
-    camera.position.y += moveSpeed;
+    camera.position.y += moveSpeed*0.3;
   }
   if (keys['e'] || moveDown) {
-    camera.position.y -= moveSpeed;
+    camera.position.y -= moveSpeed*0.3;
   }
   
   // 回転（左右）
