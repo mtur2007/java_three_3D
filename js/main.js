@@ -2390,7 +2390,7 @@ document.addEventListener('touchmove', (e) => {
 
     }
   } else if (e.touches.length === 2 && dragging === false) {
-    camera_num = (ctrl_num + 1) / 2
+    camera_num = (ctrl_num + 1) | 2
   
     const cdx = e.touches[camera_num].clientX - lastPosition1.x;
     const cdy = e.touches[camera_num].clientY - lastPosition1.y;
@@ -2417,6 +2417,7 @@ document.addEventListener('touchmove', (e) => {
 document.addEventListener('touchend',()=>{
   moveVectorX = 0;
   moveVectorZ = 0;
+  ctrl_num = search_ctrl_num(e.touches)
 }
 ); 
 // アナロク操作（デバッグ用）
