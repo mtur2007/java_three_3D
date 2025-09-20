@@ -2390,7 +2390,7 @@ document.addEventListener('touchmove', (e) => {
 
     }
   } else if (e.touches.length === 2 && dragging === false) {
-    camera_num = (ctrl_num + 1) | 2
+    camera_num = (ctrl_num + 1) % 2
   
     const cdx = e.touches[camera_num].clientX - lastPosition1.x;
     const cdy = e.touches[camera_num].clientY - lastPosition1.y;
