@@ -2391,7 +2391,7 @@ document.addEventListener('touchmove', (e) => {
     }
   } else if (e.touches.length === 2 && dragging === false) {
     
-    if (ctrl_num === null){alert('2本指null')};
+    if (ctrl_num === null){return};
    
     const camera_num = (ctrl_num + 1) % 2
   
@@ -2411,8 +2411,8 @@ document.addEventListener('touchmove', (e) => {
 
     const angley = cameraAngleY + Math.atan2(dx,dy)
     const range = Math.sqrt(dx**2 + dy**2)
-    moveVectorX = Math.sin(angley) * range
-    moveVectorZ = Math.cos(angley) * range
+    moveVectorX = Math.sin(angley) * range * 0.005
+    moveVectorZ = Math.cos(angley) * range * 0.005
 
   }
 });
@@ -2421,7 +2421,6 @@ document.addEventListener('touchend',(e)=>{
   moveVectorX = 0;
   moveVectorZ = 0;
   ctrl_num = search_ctrl_num(e.touches)
-  alert('指が離れた_残りの本数:'+e.touches.length+'\n'+'コントローラーを操作している指は'+ctrl_num+'目')
 }
 ); 
 // アナロク操作（デバッグ用）
