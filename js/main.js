@@ -2331,27 +2331,32 @@ window.addEventListener('resize', () => {
 // 視点操作
 // カメラ操作 ----------------------------------------------------------------
 
+// const ctrl = document.getElementById('controller');
+
 let touchState = 'NONE';
 let lastPosition1 = { x: 0, y: 0 };
 let lastPosition2 = { x: 0, y: 0 };
 let lastDistance = 0;
 
-canvas.addEventListener('touchstart', (e) => {
-  // e.preventDefault();
-  switch (e.touches.length) {
-    case 1:
-      touchState = 'ROTATE';
-      lastPosition1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      break;
-    case 2:
-      touchState = 'PAN_ZOOM';
-      lastPosition1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      lastPosition2 = { x: e.touches[1].clientX, y: e.touches[1].clientY };
-      lastDistance = Math.hypot(lastPosition1.x - lastPosition2.x, lastPosition1.y - lastPosition2.y);
-      break;
-    default:
-      touchState = 'NONE';
+const ctrlX = 160
+const ctrlY = canvas.height - 60 - 80
+console.log(canvas.height)
+680
+
+let ctrl_num = 0
+
+function search_ctrl_num(touches){
+  for(let i = 0; i < touches.length; i++){
+    if (100 > Math.sqrt((ctrlX-touches[i].clientX)**2 + (ctrlY-touches[i].clientY)**2)){
+      return i
+    }
   }
+  return null
+}
+
+canvas.addEventListener('touchstart', (e) => {
+  ctrl_num = search_ctrl_num(e.touches)
+  lastPosition1 = { x: e.touches[0].clientX, y: e.touches[0].clientY }
 }, { passive: false });
 
 canvas.addEventListener('touchmove', (e) => {
@@ -2362,50 +2367,60 @@ canvas.addEventListener('touchmove', (e) => {
   // Update mouse vector for raycasting (from handleMouseMove)
   handleMouseMove(e.touches[0].clientX, e.touches[0].clientY);
 
-  if (touchState === 'NONE') return;
-
   if (e.touches.length === 1 && dragging === false) {
-    const dx = e.touches[0].clientX - lastPosition1.x;
-    const dy = e.touches[0].clientY - lastPosition1.y;
+    if (ctrl_num === null){
 
-    cameraAngleY += dx * 0.005;
-    cameraAngleX += dy * 0.005;
+      const dx = lastPosition1.x - e.touches[0].clientX;
+      const dy = lastPosition1.y - e.touches[0].clientY;
+
+      const angle2 = Math.atan2(dx,dy)
+      const range = Math.sqrt(dx**2 + dy**2)
+
+      cameraAngleY += Math.sin(angle2) * range * 0.005;
+      cameraAngleX += Math.cos(angle2) * range * 0.005;
+      cameraAngleX = Math.max(-pitchLimit, Math.min(pitchLimit, cameraAngleX));
+
+      lastPosition1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else {
+      const dx = ctrlX - e.touches[0].clientX;
+      const dy = ctrlY - e.touches[0].clientY;
+
+      const angley = cameraAngleY + Math.atan2(dx,dy)
+      const range = Math.sqrt(dx**2 + dy**2)
+      moveVectorX = Math.sin(angley) * range * 0.005
+      moveVectorZ = Math.cos(angley) * range * 0.005
+
+    }
+  } else if (e.touches.length === 2 && dragging === false) {
+    camera_num = (ctrl_num + 1) / 2
+  
+    const cdx = e.touches[camera_num].clientX - lastPosition1.x;
+    const cdy = e.touches[camera_num].clientY - lastPosition1.y;
+    const angle2 = Math.atan2(cdx,cdy)
+    const crange = Math.sqrt(cdx**2 + cdy**2)
+
+    cameraAngleY += Math.sin(angle2) * crange * 0.005;
+    cameraAngleX += Math.cos(angle2) * crange * 0.005;
     cameraAngleX = Math.max(-pitchLimit, Math.min(pitchLimit, cameraAngleX));
 
-    lastPosition1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  } else if (e.touches.length === 2 && dragging === false) {
-    const currentPosition1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    const currentPosition2 = { x: e.touches[1].clientX, y: e.touches[1].clientY };
-    const currentDistance = Math.hypot(currentPosition1.x - currentPosition2.x, currentPosition1.y - currentPosition2.y);
-    const midPoint = { x: (currentPosition1.x + currentPosition2.x) / 2, y: (currentPosition1.y + currentPosition2.y) / 2 };
-    const lastMidPoint = { x: (lastPosition1.x + lastPosition2.x) / 2, y: (lastPosition1.y + lastPosition2.y) / 2 };
+    lastPosition1 = { x: e.touches[camera_num].clientX, y: e.touches[camera_num].clientY };
+  
+    const dx = e.touches[ctrl_num].clientX - ctrlX;
+    const dy = e.touches[ctrl_num].clientY - ctrlY;
 
-    // Zoom
-    const zoomAmount = lastDistance / currentDistance;
-    const direction = new THREE.Vector3();
-    camera.getWorldDirection(direction);
-    camera.position.addScaledVector(direction, (zoomAmount - 1) * -5);
+    const angley = cameraAngleY + Math.atan2(dx,dy)
+    const range = Math.sqrt(dx**2 + dy**2)
+    moveVectorX = Math.sin(angley) * range
+    moveVectorZ = Math.cos(angley) * range
 
-    // Pan
-    const dx = midPoint.x - lastMidPoint.x;
-    const dy = midPoint.y - lastMidPoint.y;
-
-    const right = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0);
-    const forward = new THREE.Vector3(Math.sin(cameraAngleY), 0, Math.cos(cameraAngleY));
-
-    camera.position.addScaledVector(right.setY(0).normalize(), -dx * 0.1);
-    camera.position.addScaledVector(forward.setY(0).normalize(), dy * 0.1);
-
-    lastPosition1 = currentPosition1;
-    lastPosition2 = currentPosition2;
-    lastDistance = currentDistance;
   }
 });
 
-canvas.addEventListener('touchend', (e) => {
-  touchState = 'NONE';
-});
-
+canvas.addEventListener('touchend',()=>{
+  moveVectorX = 0;
+  moveVectorZ = 0;
+}
+); 
 // アナロク操作（デバッグ用）
 // カメラの位置（視点の位置）
 
@@ -2423,6 +2438,9 @@ document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
 // ========== カメラ制御変数 ========== //
 let cameraAngleY = 0;  // 水平回転
 let cameraAngleX = 0;  // 垂直回転
+let moveVectorX = 0
+let moveVectorZ = 0
+
 camera.position.y += 10
 camera.position.x = -1
 // ========== ボタン UI ========== //
@@ -2447,6 +2465,12 @@ document.getElementById('btn-up').addEventListener('mousedown', () => moveUp = t
 document.getElementById('btn-up').addEventListener('mouseup', () => moveUp = false);
 document.getElementById('btn-down').addEventListener('mousedown', () => moveDown = true);
 document.getElementById('btn-down').addEventListener('mouseup', () => moveDown = false);
+
+// // 例：クリックで移動
+// stage.addEventListener('click', (e) => {
+//   // e.clientX/Y はビューポート座標（スクロール影響なし）
+//   setControllerPos(e.clientX, e.clientY);
+// });
 
 // ========== アニメーションループ ========== //
 
@@ -2484,12 +2508,12 @@ function animate() {
   camera.position.z += Math.cos(cameraAngleY) * moveSpeed * forward;
 
   // スティック入力（カメラ基準移動）
-  // camera.position.x += moveVector.x * moveSpeed;
-  // camera.position.z += moveVector.y * moveSpeed;
+  camera.position.x += moveVectorX * moveSpeed;
+  camera.position.z += moveVectorZ * moveSpeed;
 
   if (speedUp) {
     if (baseSpeed === 0.1){
-      baseSpeed = 0.3
+      baseSpeed = 0.9
       document.getElementById('speed-up').style.display = 'none';
       document.getElementById('speed-down').style.display = 'block';
     } else {

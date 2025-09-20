@@ -148,6 +148,27 @@
     box-shadow: 0 -1px 6px rgba(0,0,0,0.12);
   }
   .credits-footer a { color: #0645ad; text-decoration: underline; }
+
+  /* コントローラーのスタイル */
+  .circle-ctrl {
+    position: absolute;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.95);
+    border: 2px solid #333;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    transform: translate(-50%, -50%); /* left/top を中心にする */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    touch-action: none;
+    cursor: grab;
+    pointer-events: auto;
+  }
+  .circle-ctrl:active { cursor: grabbing; }
+
 </style>
 
   </style>
@@ -158,6 +179,7 @@
   <button id="btn-down" class="control-button" style="left: 20px; bottom: 40px;">🔻</button>
       
   <!-- 左スティック（左下に表示） -->
+  <button id="controller" class="circle-ctrl" style="left: 160px; bottom: 60px; width: 80px; height: 80px"></button>
   <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.8.6/nipplejs.min.js"></script>
   <div id="left-stick" style="user-select: none; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; position: fixed; left: 7vw; bottom: 0; width: 40vw; height: 60vh; z-index: 10;"></div>
   <div id="right-stick" style="user-select: none; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; position: fixed; right: 7vw; bottom: 0; width: 40vw; height: 60vh; z-index: 10;"></div> -->
