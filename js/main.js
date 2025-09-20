@@ -1980,6 +1980,8 @@ function coord_DisplayTo3D(Axis_num=false){
     //   point.x = pos_0.x + Math.sin(phi) * phi_rangth
     //   point.z = pos_0.z + Math.cos(phi) * phi_rangth
     // }
+    point.x += TargetDiff[0]
+    point.z += TargetDiff[1]
 
   } else {
     raycaster.setFromCamera(mouse, camera);
@@ -2007,10 +2009,9 @@ function coord_DisplayTo3D(Axis_num=false){
       // pos.z + dir.z * t,
       Axis_num.z
     );
-  }
 
-  point.x += TargetDiff[0]
-  point.z += TargetDiff[1]
+    point.y += TargetDiff
+  }
   return point
 }
 
@@ -2096,20 +2097,42 @@ async function handleMouseDown() {
   // 通常のオブジェクト選択・移動モード
   if (choice_object != false && objectEditMode === 'MOVE_EXISTING'){
     if (search_object){
-      
+
       const pos = camera.position
-      let set_y = choice_object.position.y
+      if (move_direction_y === false){
+        let set_y = choice_object.position.y
 
-      raycaster.setFromCamera(mouse, camera);
-      const dir = raycaster.ray.direction
+        raycaster.setFromCamera(mouse, camera);
+        const dir = raycaster.ray.direction
 
-      const t = Math.abs((pos.y - set_y)/dir.y)
+        const t = Math.abs((pos.y - set_y)/dir.y)
+        
+        // 交点を計算
+        TargetDiff = [
+          choice_object.position.x - (pos.x + dir.x * t),
+          choice_object.position.z - (pos.z + dir.z * t)
+        ];
+      } else {
+        raycaster.setFromCamera(mouse, camera);
+        const dir = raycaster.ray.direction
+
+        const mouAngleY = cameraAngleY - Math.atan2(dir.x,dir.z) // マウスを3d世界の座標のベクトルに変換
+        const diff = {x: choice_object.position.x - pos.x, z: choice_object.position.z - pos.z}
+        const hypotenuse = Math.cos(Math.atan2(diff.x, diff.z) - cameraAngleY) * Math.sqrt(diff.x**2 + diff.z**2)
+        
+        // console.log('• • : '+'x, '+diff.x+'z, '+diff.z)
+        // console.log('•-• : '+hypotenuse)
+        // console.log('_./ : '+mouAngleY + ' x,'+ Math.sin(mouAngleY) + ' y,'+Math.cos(mouAngleY))
+        // console.log('--,-: '+(hypotenuse/Math.cos(mouAngleY))*Math.cos(mouAngleY),hypotenuse/Math.cos(mouAngleY)*dir.y)
+        
+        const t = hypotenuse/(Math.cos(cameraAngleY)*dir.z+Math.sin(cameraAngleY)*dir.x)//,dir.z
+        
+        // console.log('/ : '+hypotenuse+' '+Math.floor(Math.cos(cameraAngleY)*dir.z+Math.sin(cameraAngleY)*dir.x))
+        // console.log('t : '+t)
       
-      // 交点を計算
-      TargetDiff = [
-        choice_object.position.x - (pos.x + dir.x * t),
-        choice_object.position.z - (pos.z + dir.z * t)
-      ];
+        // 交点を計算
+        TargetDiff = choice_object.position.y - (pos.y + dir.y * t) 
+      }
 
       console.log(TargetDiff)
 
