@@ -1940,6 +1940,7 @@ async function search_point() {
   } else {
     if (choice_object !== false){choice_object.material.color.set(0xff0000)}
     choice_object = false;
+    dragging = false
     GuideLine.visible = false
     GuideGrid.visible = false
   }  
@@ -2017,7 +2018,7 @@ function coord_DisplayTo3D(Axis_num=false){
 
 let dragging = false;
 function handleDrag() {
-  if (dragging === false) { return }
+  if (dragging != true) { return }
 
   let point = 0
 
@@ -2134,8 +2135,6 @@ async function handleMouseDown() {
         TargetDiff = choice_object.position.y - (pos.y + dir.y * t) 
       }
 
-      console.log(TargetDiff)
-
       search_object = false
       choice_object.material.color.set(0x0000ff)
       
@@ -2154,7 +2153,10 @@ async function handleMouseDown() {
 window.addEventListener('mousedown', handleMouseDown);
 window.addEventListener('touchstart', (e) => {
   e.preventDefault();      // ← スクロールを止める
-  if (objectEditMode === 'MOVE_EXISTING') { search_point(); }
+  if (objectEditMode === 'MOVE_EXISTING') { 
+    dragging = null//'stand_by';
+    search_point();
+  }
   handleMouseDown();      // ← 同じ関数に渡している
 }, { passive: false });
 
@@ -2362,7 +2364,7 @@ canvas.addEventListener('touchmove', (e) => {
 
   if (touchState === 'NONE') return;
 
-  if (e.touches.length === 1 && dragging === false && touchState === 'ROTATE') {
+  if (e.touches.length === 1 && dragging === false) {
     const dx = e.touches[0].clientX - lastPosition1.x;
     const dy = e.touches[0].clientY - lastPosition1.y;
 
@@ -2371,7 +2373,7 @@ canvas.addEventListener('touchmove', (e) => {
     cameraAngleX = Math.max(-pitchLimit, Math.min(pitchLimit, cameraAngleX));
 
     lastPosition1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  } else if (e.touches.length === 2 && touchState === 'PAN_ZOOM') {
+  } else if (e.touches.length === 2 && dragging === false) {
     const currentPosition1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     const currentPosition2 = { x: e.touches[1].clientX, y: e.touches[1].clientY };
     const currentDistance = Math.hypot(currentPosition1.x - currentPosition2.x, currentPosition1.y - currentPosition2.y);
@@ -2538,7 +2540,7 @@ function animate() {
 
   renderer.render(scene, camera); 
 
-  if (dragging){
+  if (dragging === true){
     const pos = choice_object.position
     cameraSub.position.set(pos.x-Math.sin(cameraAngleY)*0.2,pos.y+5,pos.z-Math.cos(cameraAngleY)*0.2)
 
