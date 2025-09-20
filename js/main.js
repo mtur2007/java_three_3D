@@ -2391,28 +2391,28 @@ document.addEventListener('touchmove', (e) => {
     }
   } else if (e.touches.length === 2 && dragging === false) {
     
-    alert('2本指で操作\n'+'コントローラーを操作している指は'+ctrl_num+'目')
+    if (ctrl_num === null){alert('2本指null')};
    
-    // camera_num = (ctrl_num + 1) % 2
+    const camera_num = (ctrl_num + 1) % 2
   
-    // const cdx = e.touches[camera_num].clientX - lastPosition1.x;
-    // const cdy = e.touches[camera_num].clientY - lastPosition1.y;
-    // const angle2 = Math.atan2(cdx,cdy)
-    // const crange = Math.sqrt(cdx**2 + cdy**2)
+    const cdx = lastPosition1.x - e.touches[camera_num].clientX;
+    const cdy = lastPosition1.y - e.touches[camera_num].clientY;
+    const angle2 = Math.atan2(cdx,cdy)
+    const crange = Math.sqrt(cdx**2 + cdy**2)
 
-    // cameraAngleY += Math.sin(angle2) * crange * 0.005;
-    // cameraAngleX += Math.cos(angle2) * crange * 0.005;
-    // cameraAngleX = Math.max(-pitchLimit, Math.min(pitchLimit, cameraAngleX));
+    cameraAngleY += Math.sin(angle2) * crange * 0.005;
+    cameraAngleX += Math.cos(angle2) * crange * 0.005;
+    cameraAngleX = Math.max(-pitchLimit, Math.min(pitchLimit, cameraAngleX));
 
-    // lastPosition1 = { x: e.touches[camera_num].clientX, y: e.touches[camera_num].clientY };
+    lastPosition1 = { x: e.touches[camera_num].clientX, y: e.touches[camera_num].clientY };
   
-    // const dx = e.touches[ctrl_num].clientX - ctrlX;
-    // const dy = e.touches[ctrl_num].clientY - ctrlY;
+    const dx = ctrlX - e.touches[ctrl_num].clientX;
+    const dy = ctrlY - e.touches[ctrl_num].clientY;
 
-    // const angley = cameraAngleY + Math.atan2(dx,dy)
-    // const range = Math.sqrt(dx**2 + dy**2)
-    // moveVectorX = Math.sin(angley) * range
-    // moveVectorZ = Math.cos(angley) * range
+    const angley = cameraAngleY + Math.atan2(dx,dy)
+    const range = Math.sqrt(dx**2 + dy**2)
+    moveVectorX = Math.sin(angley) * range
+    moveVectorZ = Math.cos(angley) * range
 
   }
 });
