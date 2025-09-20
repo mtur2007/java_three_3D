@@ -2414,7 +2414,7 @@ document.addEventListener('touchmove', (e) => {
   }
 });
 
-document.addEventListener('touchend',()=>{
+document.addEventListener('touchend',(e)=>{
   moveVectorX = 0;
   moveVectorZ = 0;
   ctrl_num = search_ctrl_num(e.touches)
