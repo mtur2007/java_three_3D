@@ -2332,6 +2332,44 @@ window.addEventListener('resize', () => {
 // カメラ操作 ----------------------------------------------------------------
 
 // const ctrl = document.getElementById('controller');
+// let logwindow = document.getElementById("logwindow");
+// let text = ''
+
+// function alert(txt){
+//   text += txt+'\n'
+//   logwindow.innerText = keepLastNLines(text)
+// }
+
+function keepLastNLines(text, maxLines = 20, options = {}) {
+  const {
+    treatEscapedNewline = false,
+    normalizeLineEndings = true,
+    joinWith = '\n'
+  } = options;
+
+  if (text == null) return '';
+
+  let s = String(text);
+
+  // オプション: "\\n" を実改行に変換
+  if (treatEscapedNewline) {
+    s = s.replace(/\\r\\n/g, '\r\n').replace(/\\r/g, '\r').replace(/\\n/g, '\n');
+  }
+
+  // 改行をLFに正規化
+  if (normalizeLineEndings) {
+    s = s.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+         .replace(/\u2028/g, '\n').replace(/\u2029/g, '\n').replace(/\u0085/g, '\n');
+  }
+
+  const lines = s.split('\n'); // 空行も 1 行としてカウント
+  if (lines.length <= maxLines) return lines.join(joinWith);
+
+  // 末尾 maxLines を残す（先頭の余分を削除）
+  const kept = lines.slice(lines.length - maxLines);
+  return kept.join(joinWith);
+}
+
 
 let touchState = 'NONE';
 let lastPosition1 = { x: 0, y: 0 };
@@ -2340,21 +2378,27 @@ let lastDistance = 0;
 
 const ctrlX = 160
 const ctrlY = canvas.height - 60 - 80
-
+let camera_num = 1
 let ctrl_num = 0
 
-function search_ctrl_num(touches){
+let ctrl_id = null
+
+function search_ctrl_num(e){
+  const touches = e.touches
   for(let i = 0; i < touches.length; i++){
     if (40 > Math.sqrt((ctrlX-touches[i].clientX)**2 + (ctrlY-touches[i].clientY)**2)){
-      return i
+      ctrl_id = e.changedTouches[0].identifier
+      ctrl_num = i
+      camera_num = (ctrl_num+1)%2
     }
   }
-  return null
 }
 
 document.addEventListener('touchstart', (e) => {
-  ctrl_num = search_ctrl_num(e.touches)
-  lastPosition1 = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+  search_ctrl_num(e)
+  if (e.changedTouches[0].identifier != ctrl_id){
+  lastPosition1 = { x: e.touches[e.touches.length-1].clientX, y: e.touches[e.touches.length-1].clientY }
+  }
 }, { passive: false });
 
 document.addEventListener('touchmove', (e) => {
@@ -2366,8 +2410,7 @@ document.addEventListener('touchmove', (e) => {
   handleMouseMove(e.touches[0].clientX, e.touches[0].clientY);
 
   if (e.touches.length === 1 && dragging === false) {
-    if (ctrl_num === null){
-
+    if (ctrl_id === null){
       const dx = lastPosition1.x - e.touches[0].clientX;
       const dy = lastPosition1.y - e.touches[0].clientY;
 
@@ -2385,15 +2428,17 @@ document.addEventListener('touchmove', (e) => {
 
       const angley = cameraAngleY + Math.atan2(dx,dy)
       const range = Math.sqrt(dx**2 + dy**2)
-      moveVectorX = Math.sin(angley) * range * 0.005
-      moveVectorZ = Math.cos(angley) * range * 0.005
+      moveVectorX = Math.sin(angley) * range * 0.01
+      moveVectorZ = Math.cos(angley) * range * 0.01
 
     }
   } else if (e.touches.length === 2 && dragging === false) {
-    camera_num = (ctrl_num + 1) % 2
-  
-    const cdx = e.touches[camera_num].clientX - lastPosition1.x;
-    const cdy = e.touches[camera_num].clientY - lastPosition1.y;
+
+    if (ctrl_id===null){return}
+    // if (e.changedTouches[1].identifier === ctrl_id){alert('ctrl1')}
+
+    const cdx = lastPosition1.x - e.touches[camera_num].clientX;
+    const cdy = lastPosition1.y - e.touches[camera_num].clientY;
     const angle2 = Math.atan2(cdx,cdy)
     const crange = Math.sqrt(cdx**2 + cdy**2)
 
@@ -2403,21 +2448,27 @@ document.addEventListener('touchmove', (e) => {
 
     lastPosition1 = { x: e.touches[camera_num].clientX, y: e.touches[camera_num].clientY };
   
-    const dx = e.touches[ctrl_num].clientX - ctrlX;
-    const dy = e.touches[ctrl_num].clientY - ctrlY;
+    const dx = ctrlX - e.touches[ctrl_num].clientX;
+    const dy = ctrlY - e.touches[ctrl_num].clientY;
 
     const angley = cameraAngleY + Math.atan2(dx,dy)
     const range = Math.sqrt(dx**2 + dy**2)
-    moveVectorX = Math.sin(angley) * range
-    moveVectorZ = Math.cos(angley) * range
+    moveVectorX = Math.sin(angley) * range * 0.01
+    moveVectorZ = Math.cos(angley) * range * 0.01
 
   }
 });
 
 document.addEventListener('touchend',(e)=>{
   moveVectorX = 0;
-  moveVectorZ = 0;
-  ctrl_num = search_ctrl_num(e.touches)
+  moveVectorZ = 0; 
+  if (ctrl_id === e.changedTouches[0].identifier){
+    ctrl_id = null
+    ctrl_num = null
+  } else {
+    ctrl_num = 0
+    camera_num = 1
+  }
 }
 ); 
 // アナロク操作（デバッグ用）

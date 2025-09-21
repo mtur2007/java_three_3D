@@ -79,6 +79,27 @@
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
   }
+  .log-control-square-button {
+    position: fixed;
+    width: 400px;
+    height: 400px;
+    font-size: 24px;
+    border: none;
+    border-radius: 4px; /* ← 四角っぽい角丸（完全に四角なら 0 に） */
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    z-index: 20;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    transition: all 0.1s ease-in-out;
+
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
 
   /* ホバー（マウスを乗せたとき）で暗くする */
   .control-button:hover {
@@ -224,7 +245,18 @@
     font-size: 16px;
     border-radius: 8px;
   ">🌙 夜にする</button>
-  
+
+  <!-- <button id = "logwindow" class="log-control-square-button" style="
+  position: absolute;
+  left: 20px;
+  top: 20px;
+  padding: 10px;
+  font-size: 14px;
+  color: #000;
+  z-index: 10;
+  backdrop-filter: blur(4px); /* iOSっぽいガラス感 */
+  ">モバイル出力用</button>  -->
+
   <footer class="credits-footer" role="contentinfo" aria-label="出典情報">
     <small>
       データ: PLATEAU（国土交通省: 
