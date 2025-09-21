@@ -2152,6 +2152,7 @@ async function handleMouseDown() {
 // 物体移動開始
 window.addEventListener('mousedown', handleMouseDown);
 window.addEventListener('touchstart', (e) => {
+  if (OperationMode === 0){return}
   e.preventDefault();      // ← スクロールを止める
   if (objectEditMode === 'MOVE_EXISTING') { 
     dragging = null//'stand_by';
@@ -2370,11 +2371,8 @@ function keepLastNLines(text, maxLines = 20, options = {}) {
   return kept.join(joinWith);
 }
 
-
-let touchState = 'NONE';
+const ctrl_ui = document.getElementById("controller")
 let lastPosition1 = { x: 0, y: 0 };
-let lastPosition2 = { x: 0, y: 0 };
-let lastDistance = 0;
 
 const ctrlX = 160
 const ctrlY = canvas.height - 60 - 80
@@ -2387,9 +2385,11 @@ function search_ctrl_num(e){
   const touches = e.touches
   for(let i = 0; i < touches.length; i++){
     if (40 > Math.sqrt((ctrlX-touches[i].clientX)**2 + (ctrlY-touches[i].clientY)**2)){
-      ctrl_id = e.changedTouches[0].identifier
-      ctrl_num = i
-      camera_num = (ctrl_num+1)%2
+      if (ctrl_id === null){
+        ctrl_id = e.changedTouches[0].identifier
+        ctrl_num = i
+        camera_num = (ctrl_num+1)%2
+      }
     }
   }
 }
@@ -2402,12 +2402,11 @@ document.addEventListener('touchstart', (e) => {
 }, { passive: false });
 
 document.addEventListener('touchmove', (e) => {
-
   // e.preventDefault();
   // e.preventDefault();
 
   // Update mouse vector for raycasting (from handleMouseMove)
-  handleMouseMove(e.touches[0].clientX, e.touches[0].clientY);
+  // handleMouseMove(e.touches[0].clientX, e.touches[0].clientY);
 
   if (e.touches.length === 1 && dragging === false) {
     if (ctrl_id === null){
@@ -2430,6 +2429,9 @@ document.addEventListener('touchmove', (e) => {
       const range = Math.sqrt(dx**2 + dy**2)
       moveVectorX = Math.sin(angley) * range * 0.01
       moveVectorZ = Math.cos(angley) * range * 0.01
+
+      ctrl_ui.style.left = ctrlX - Math.sin(angley) * Math.min(40, range) + 'px';
+      ctrl_ui.style.top = ctrlY - Math.cos(angley) * Math.min(40, range) + 'px';
 
     }
   } else if (e.touches.length === 2 && dragging === false) {
@@ -2456,6 +2458,9 @@ document.addEventListener('touchmove', (e) => {
     moveVectorX = Math.sin(angley) * range * 0.01
     moveVectorZ = Math.cos(angley) * range * 0.01
 
+    ctrl_ui.style.left = ctrlX - Math.sin(angley) * Math.min(40, range) + 'px';
+    ctrl_ui.style.top = ctrlY - Math.cos(angley) * Math.min(40, range) + 'px';
+
   }
 });
 
@@ -2465,6 +2470,8 @@ document.addEventListener('touchend',(e)=>{
   if (ctrl_id === e.changedTouches[0].identifier){
     ctrl_id = null
     ctrl_num = null
+    ctrl_ui.style.left = ctrlX + 'px';
+    ctrl_ui.style.top = ctrlY + 'px';
   } else {
     ctrl_num = 0
     camera_num = 1
@@ -2576,10 +2583,10 @@ function animate() {
 
   // 上下移動（Q/Eキー）
   if (keys['q'] || moveUp) {
-    camera.position.y += moveSpeed*0.3;
+    camera.position.y += moveSpeed*0.5;
   }
   if (keys['e'] || moveDown) {
-    camera.position.y -= moveSpeed*0.3;
+    camera.position.y -= moveSpeed*0.5;
   }
   
   // 回転（左右）

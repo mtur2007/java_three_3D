@@ -52,13 +52,8 @@
       -webkit-tap-highlight-color: transparent;
       -webkit-touch-callout: none;
     }
-    
-    .control-button:active {
-      transform: scale(0.93);
-      opacity: 0.5;
-    }
 
-    .control-square-button {
+  .control-square-button {
     position: fixed;
     width: 400px;
     height: 40px;
@@ -150,12 +145,11 @@
   .credits-footer a { color: #0645ad; text-decoration: underline; }
 
   /* コントローラーのスタイル */
-  .circle-ctrl {
+  .circle-ctrl-area {
     position: absolute;
-    width: 56px;
-    height: 56px;
     border-radius: 50%;
     background: rgba(255,255,255,0.95);
+    background: rgba(0,0,0,0.5);
     border: 2px solid #333;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     transform: translate(-50%, -50%); /* left/top を中心にする */
@@ -167,7 +161,26 @@
     cursor: grab;
     pointer-events: auto;
   }
-  .circle-ctrl:active { cursor: grabbing; }
+  /* .circle-ctrl-area { cursor: grabbing; } */
+
+  .circle-ctrl {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.5);
+    border: 2px solid #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    transform: translate(-50%, -50%); /* left/top を中心にする */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    touch-action: none;
+    cursor: grab;
+    pointer-events: auto;
+  }
+  /* .circle-ctrl:active { cursor: grabbing; } */
 
 </style>
 
@@ -179,7 +192,8 @@
   <button id="btn-down" class="control-button" style="right: 160px; bottom: 70px;">🔻</button>
       
   <!-- 左スティック（左下に表示） -->
-  <button id="controller" class="circle-ctrl" style="left: 160px; bottom: 60px; width: 80px; height: 80px"></button>
+  <button id="controller-area" class="circle-ctrl-area" style="left: 160px; bottom: 60px; width: 80px; height: 80px"></button>
+  <button id="controller" class="circle-ctrl" style="left: 160px; bottom: 110px; width: 30px; height: 30px"></button>
   <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.8.6/nipplejs.min.js"></script>
   <div id="left-stick" style="user-select: none; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; position: fixed; left: 7vw; bottom: 0; width: 40vw; height: 60vh; z-index: 10;"></div>
   <div id="right-stick" style="user-select: none; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; position: fixed; right: 7vw; bottom: 0; width: 40vw; height: 60vh; z-index: 10;"></div> -->
@@ -259,10 +273,14 @@
 
   <footer class="credits-footer" role="contentinfo" aria-label="出典情報">
     <small>
-      データ: PLATEAU（国土交通省: 
-      <a href="https://plateauview.mlit.go.jp/" target="_blank" rel="noopener noreferrer">PLATEAU VIEW</a>. 
-      ビジュアライズ: <a href="https://threejs.org/" target="_blank" rel="noopener noreferrer">three.js (r0.169.0, MIT)</a>. 
-      変換: <a href="https://github.com/Project-PLATEAU/PLATEAU-GIS-Converter" target="_blank" rel="noopener noreferrer">PLATEAU GIS Converter</a>（release v0.1.2、ダウンロード日: 2025-09-19）。
+      データ: PLATEAU（国土交通省）
+      <!-- <a href="https://plateauview.mlit.go.jp/" target="_blank" rel="noopener noreferrer">PLATEAU VIEW</a>.  -->
+      ビジュアライズ: 
+      <!-- <a href="https://threejs.org/" target="_blank" rel="noopener noreferrer"> -->
+      three.js (r0.169.0, MIT)</a>. 
+      変換: 
+      <!-- <a href="https://github.com/Project-PLATEAU/PLATEAU-GIS-Converter" target="_blank" rel="noopener noreferrer"> -->
+      PLATEAU GIS Converter</a>（release v0.1.2、ダウンロード日: 2025-09-19）
     </small>
   </footer>
   
