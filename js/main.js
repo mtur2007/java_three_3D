@@ -2430,8 +2430,9 @@ document.addEventListener('touchmove', (e) => {
       moveVectorX = Math.sin(angley) * range * 0.01
       moveVectorZ = Math.cos(angley) * range * 0.01
 
-      ctrl_ui.style.left = ctrlX - Math.sin(angley) * Math.min(40, range) + 'px';
-      ctrl_ui.style.top = ctrlY - Math.cos(angley) * Math.min(40, range) + 'px';
+      const ctrl_angle = Math.atan2(dx,dy)
+      ctrl_ui.style.left = ctrlX - Math.sin(ctrl_angle) * Math.min(40, range) + 'px';
+      ctrl_ui.style.top = ctrlY - Math.cos(ctrl_angle) * Math.min(40, range) + 'px';
 
     }
   } else if (e.touches.length === 2 && dragging === false) {
@@ -2458,8 +2459,9 @@ document.addEventListener('touchmove', (e) => {
     moveVectorX = Math.sin(angley) * range * 0.01
     moveVectorZ = Math.cos(angley) * range * 0.01
 
-    ctrl_ui.style.left = ctrlX - Math.sin(angley) * Math.min(40, range) + 'px';
-    ctrl_ui.style.top = ctrlY - Math.cos(angley) * Math.min(40, range) + 'px';
+    const ctrl_angle = Math.atan2(dx,dy)
+    ctrl_ui.style.left = ctrlX - Math.sin(ctrl_angle) * Math.min(40, range) + 'px';
+    ctrl_ui.style.top = ctrlY - Math.cos(ctrl_angle) * Math.min(40, range) + 'px';
 
   }
 });
