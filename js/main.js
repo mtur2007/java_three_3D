@@ -2467,11 +2467,11 @@ document.addEventListener('touchmove', (e) => {
 });
 
 document.addEventListener('touchend',(e)=>{
-  moveVectorX = 0;
-  moveVectorZ = 0; 
   if (ctrl_id === e.changedTouches[0].identifier){
     ctrl_id = null
     ctrl_num = null
+    moveVectorX = 0;
+    moveVectorZ = 0; 
     ctrl_ui.style.left = ctrlX + 'px';
     ctrl_ui.style.top = ctrlY + 'px';
   } else {
