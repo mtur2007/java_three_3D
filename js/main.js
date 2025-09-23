@@ -1729,8 +1729,8 @@ canvas.addEventListener('mousemove', (e) => {
   
 });
 // タッチイベント
-document.addEventListener("touchstart", (e) => {
-  e.preventDefault(); // スクロール防止
+window.addEventListener("touchstart", (e) => {
+  // e.preventDefault(); // スクロール防止
   const touch = e.touches[0];
   handleMouseMove(touch.clientX, touch.clientY);
 }, { passive: false });
@@ -2394,7 +2394,7 @@ function search_ctrl_num(e){
   }
 }
 
-document.addEventListener('touchstart', (e) => {
+window.addEventListener('touchstart', (e) => {
   search_ctrl_num(e)
   if (e.changedTouches[0].identifier != ctrl_id){
   lastPosition1 = { x: e.touches[e.touches.length-1].clientX, y: e.touches[e.touches.length-1].clientY }
@@ -2479,7 +2479,8 @@ document.addEventListener('touchend',(e)=>{
     camera_num = 1
   }
 }
-); 
+);
+
 // アナロク操作（デバッグ用）
 // カメラの位置（視点の位置）
 
