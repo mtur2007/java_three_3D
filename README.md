@@ -169,8 +169,7 @@
                 ><table style="width: 100%; table-layout: fixed; border-spacing: 0px;">
                 <tr>
                     <th style="width: 30%;">before</th>
-                    <th style="width: 30%;">tap/click</th>
-                    <th style="width: 30%;">dragr</th>
+                    <th style="width: 30%;">tap/click -> drag</th>
                     <th style="width: 30%;">after</th>
                 </tr>
                 <tr>
@@ -183,15 +182,7 @@
                 `/_📦./_ /_ /_ /_ /_ /<br>
                 /_ /_ /_ /_ /_ /_ /_ /
                 <br><br>
-                </td>
-                <td>
-                `````,_ ,_ ,_ ,_ ,_ ,_ ,_ , <br>
-                ````/_ /_ /_ /_ /_ /_ /_ /<br>
-                ```/_ /_ /_ /_ /_ /_ /_ /<br>
-                ``/_ /_ /_ /_ /_ /_ /_ /<br>
-                `/_📦./_ /_ /_ /_ /_ /<br>
-                /_ /👆/_ /_ /_ /_ /_ /
-                </td>                    
+                </td>   
                 <td>
                 `````,_ ,_ ,_ ,_ ,_ ,_ ,_ , <br>
                 ````/_ /_ /_ /_ /_ /_ /_ /<br>
@@ -221,8 +212,7 @@
                 > 例: (x,0,z) ▷ (x,5,z)<table style="width: 100%; table-layout: fixed; border-spacing: 0px;">
                 <tr>
                     <th style="width: 30%;">before</th>
-                    <th style="width: 30%;">tap/click</th>
-                    <th style="width: 30%;">drag</th>
+                    <th style="width: 30%;">tap/click -> drag</th>
                     <th style="width: 30%;">after</th>
                 </tr>
                 <tr>
@@ -237,17 +227,6 @@
                 `/_ /_ /_ /_ /_ /_ /_ /<br>
                 /_ /_ /_ /_ /_ /_ /_ /
                 <br><br>
-                </td>
-                <td>
-                <br>
-                <br>
-                `````,_ ,_ ,_ ,_ ,_ ,_ ,_ , <br>
-                ````/_ /_ /_ /_ /_ /_ /_ /<br>
-                ```/_ /_ /_ /_ /_ /_ /_ /<br>
-                ``/_ /_ /_/📦/_ /_ /_ /<br>
-                `/_ /_ /_ /.👆. /_ /_ /<br>
-                /_ /_ /_ /_ /_ /_ /_ /
-                </td>
                 <td>
                   ````````` 📦<br>       
                 ````````` 👆<br>
