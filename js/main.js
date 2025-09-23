@@ -1719,28 +1719,6 @@ function createLine(p1, p2, color = 0xff0000) {
   return new THREE.Line(geometry, material);
 }
 
-// マウス座標管理用のベクトルを作成
-const mouse = new THREE.Vector2();
-// マウスイベントを登録
-canvas.addEventListener('mousemove', (e) => {
-  handleMouseMove(e.clientX, e.clientY);
-
-  // console.log(e.clientX, e.clientY)
-  
-});
-// タッチイベント
-window.addEventListener("touchstart", (e) => {
-  // e.preventDefault(); // スクロール防止
-  const touch = e.touches[0];
-  handleMouseMove(touch.clientX, touch.clientY);
-}, { passive: false });
-
-document.addEventListener("touchmove", (e) => {
-  e.preventDefault(); // スクロール防止
-  const touch = e.touches[0];
-  handleMouseMove(touch.clientX, touch.clientY);
-}, { passive: false });
-
 // マウスを動かしたときのイベント
 function handleMouseMove(x, y) {
   const element = canvas;
@@ -2149,9 +2127,16 @@ async function handleMouseDown() {
   }
 }
 
+// マウス座標管理用のベクトルを作成
+const mouse = new THREE.Vector2();
+
 // 物体移動開始
 window.addEventListener('mousedown', handleMouseDown);
 window.addEventListener('touchstart', (e) => {
+  
+  const touch = e.touches[0];
+  handleMouseMove(touch.clientX, touch.clientY);
+
   if (OperationMode === 0){return}
   e.preventDefault();      // ← スクロールを止める
   if (objectEditMode === 'MOVE_EXISTING') { 
@@ -2162,9 +2147,14 @@ window.addEventListener('touchstart', (e) => {
 }, { passive: false });
 
 // 物体移動追尾
-document.addEventListener('mousemove', handleDrag);
+document.addEventListener('mousemove', (e) => {
+  handleMouseMove(e.clientX, e.clientY);
+  handleDrag
+});
 document.addEventListener('touchmove', (e) => {
-  e.preventDefault();
+  e.preventDefault(); // スクロール防止
+  const touch = e.touches[0];
+  handleMouseMove(touch.clientX, touch.clientY);
   handleDrag();
 }, { passive: false });
 
