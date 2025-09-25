@@ -126,7 +126,7 @@ pmremGenerator.compileEquirectangularShader();
 let envMap = null
 let envMapNight = null
 const loader = new THREE.TextureLoader();
-  loader.load('textures/citrus_orchard_road_puresky.jpg', (texture) => {
+  loader.load('textures/sky.jpg', (texture) => {
     texture.mapping = THREE.EquirectangularReflectionMapping;
     texture.colorSpace = THREE.SRGBColorSpace;
     scene.background = texture;
@@ -150,7 +150,7 @@ scene.environment = envMapNight;
 scene.background = envMap;
 scene.environment = envMap;
 
-renderer.toneMappingExposure = 0.4;
+renderer.toneMappingExposure = 1;
 
 // --- ライト追加（初回のみ） ---
 const ambient = new THREE.AmbientLight(0xffffff, 0.6);
@@ -176,8 +176,7 @@ toggleBtn.addEventListener("click", () => {
     
     dirLight.visible = false;
     ambient.visible = false;
-
-    renderer.toneMappingExposure = 0.7;
+    
     toggleBtn.textContent = "☀️ 昼にする";
 
   } else {
@@ -188,7 +187,6 @@ toggleBtn.addEventListener("click", () => {
     dirLight.visible = true;
     ambient.visible = true;
 
-    renderer.toneMappingExposure = 0.4;
     toggleBtn.textContent = "🌙 夜にする";
   }
 });
@@ -204,7 +202,6 @@ toggleBtn.addEventListener("touchstart", () => {
     dirLight.visible = false;
     ambient.visible = false;
 
-    renderer.toneMappingExposure = 0.7;
     toggleBtn.textContent = "☀️ 昼にする";
 
   } else {
@@ -215,7 +212,6 @@ toggleBtn.addEventListener("touchstart", () => {
     dirLight.visible = true;
     ambient.visible = true;
 
-    renderer.toneMappingExposure = 0.4;
     toggleBtn.textContent = "🌙 夜にする";
   }
 });

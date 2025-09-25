@@ -9,7 +9,7 @@ import { DRACOLoader } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples
 export function WorldCreat(scene,train_width,car_Spacing){
 
 // ライト作成
-const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+const dirLight = new THREE.DirectionalLight(0xffeeee, 1);
 dirLight.name = 'dirLight'
 
 // ライトの位置（光が来る方）
