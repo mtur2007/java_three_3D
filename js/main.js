@@ -176,7 +176,7 @@ toggleBtn.addEventListener("click", () => {
     
     dirLight.visible = false;
     ambient.visible = false;
-    
+
     toggleBtn.textContent = "☀️ 昼にする";
 
   } else {
@@ -1638,7 +1638,7 @@ GuideGrid_Center_x.visible = false
 GuideGrid_Center_z.visible = false
 
 let choice_object = false
-let search_object = true
+let search_object = false
 let move_direction_y = false
 
 // search_point();
@@ -1689,7 +1689,7 @@ async function search_point() {
   } else {
     if (choice_object !== false){choice_object.material.color.set(0xff0000)}
     choice_object = false;
-    dragging = false
+    // dragging = false;
     GuideLine.visible = false
     GuideGrid.visible = false
   }  
@@ -1698,6 +1698,50 @@ async function search_point() {
   renderer.render(scene, camera);
   await search_point();
 }
+
+async function onerun_search_point() {
+  
+  // 画面上の光線とぶつかったオブジェクトを得る
+  const intersects = getIntersectObjects();
+
+  if (intersects.length > 0) {
+    if (choice_object != intersects[0].object){
+      if (choice_object !== false){ 
+        // 残像防止
+        choice_object.material.color.set(0xff0000)
+        GuideLine.visible = false
+        GuideGrid.visible = false
+      }
+
+      // 物体の取得
+      choice_object = intersects[0].object
+      choice_object.material.color.set(0x00ff00)
+
+      if (move_direction_y){
+        GuideLine.position.copy(choice_object.position)
+        GuideLine.visible = true
+
+      } else {
+        GuideGrid.position.copy(choice_object.position)
+        GuideGrid.material.color.set(0x88aa88)
+        GuideGrid.visible = true
+      }
+    }
+
+  } else {
+    if (choice_object !== false){choice_object.material.color.set(0xff0000)}
+    choice_object = false;
+
+    dragging = false;
+    GuideLine.visible = false
+    GuideGrid.visible = false
+  }  
+
+  // レンダリング
+  renderer.render(scene, camera);
+  return choice_object;
+}
+
 
 function coord_DisplayTo3D(Axis_num=false){
 
@@ -1791,42 +1835,52 @@ function handleDrag() {
   drawingObject();
 }
 
-function handleMouseUp() {
+async function handleMouseUp(mobile = false) {
 
-  if (dragging === false ){return}
+  if (pause){return};
+
+  if (OperationMode === 1 && objectEditMode === 'MOVE_EXISTING'){
   
-  dragging = false;
+    if (dragging != false){
+      
+      dragging = false;
 
-  // レイキャスト = マウス位置からまっすぐに伸びる光線ベクトルを生成
-  let point= 0
-  if (choice_object) { // Only update position if an object was chosen
-    if (!move_direction_y){
-      point = coord_DisplayTo3D(choice_object.position)
-    } else {
-      point = coord_DisplayTo3D(choice_object.position)
+      // レイキャスト = マウス位置からまっすぐに伸びる光線ベクトルを生成
+      let point= 0
+      if (choice_object) { // Only update position if an object was chosen
+        if (!move_direction_y){
+          point = coord_DisplayTo3D(choice_object.position)
+        } else {
+          point = coord_DisplayTo3D(choice_object.position)
+        }
+
+        choice_object.position.set(point.x,point.y,point.z)
+        choice_object.material.color.set(0xff0000) // Reset color to red
+      }
+
+      GuideLine.visible = false;
+      GuideGrid.visible = false;
+
+      drawingObject();
     }
-    choice_object.position.set(point.x,point.y,point.z)
-    choice_object.material.color.set(0xff0000) // Reset color to red
+
+    if (search_object === false){
+
+      await sleep(200);
+      search_object = true;
+      choice_object = false; // Deselect the object
+
+      dragging = false
+
+      if (!mobile){
+        search_point();
+      }
+    }
   }
-
-  search_object = true;
-  choice_object = false; // Deselect the object
-
-  GuideLine.visible = false;
-  GuideGrid.visible = false;
-
-  drawingObject();
-
-  search_point();
-
 }
   
 async function handleMouseDown() {
-  if (pause || OperationMode !== 1) { return; }
-
-  search_object = false
-  await sleep(200);
-  search_object = true
+  if (pause || OperationMode != 1) { return; }
   
   // 架線柱配置モード
   if (polePlacementMode) {
@@ -1848,54 +1902,59 @@ async function handleMouseDown() {
     return;}
   
   // 通常のオブジェクト選択・移動モード
-  if (choice_object != false && objectEditMode === 'MOVE_EXISTING'){
-    if (search_object){
+  if (objectEditMode === 'MOVE_EXISTING'){
 
-      const pos = camera.position
-      if (move_direction_y === false){
-        let set_y = choice_object.position.y
+    search_object = false
+    await sleep(100);
 
-        raycaster.setFromCamera(mouse, camera);
-        const dir = raycaster.ray.direction
+    const answer = await onerun_search_point();
+    if (answer === false){
+      return;
+    }
 
-        const t = Math.abs((pos.y - set_y)/dir.y)
-        
-        // 交点を計算
-        TargetDiff = [
-          choice_object.position.x - (pos.x + dir.x * t),
-          choice_object.position.z - (pos.z + dir.z * t)
-        ];
-      } else {
-        raycaster.setFromCamera(mouse, camera);
-        const dir = raycaster.ray.direction
+    const pos = camera.position
+    if (move_direction_y === false){
+      let set_y = choice_object.position.y
 
-        const mouAngleY = cameraAngleY - Math.atan2(dir.x,dir.z) // マウスを3d世界の座標のベクトルに変換
-        const diff = {x: choice_object.position.x - pos.x, z: choice_object.position.z - pos.z}
-        const hypotenuse = Math.cos(Math.atan2(diff.x, diff.z) - cameraAngleY) * Math.sqrt(diff.x**2 + diff.z**2)
-        
-        // console.log('• • : '+'x, '+diff.x+'z, '+diff.z)
-        // console.log('•-• : '+hypotenuse)
-        // console.log('_./ : '+mouAngleY + ' x,'+ Math.sin(mouAngleY) + ' y,'+Math.cos(mouAngleY))
-        // console.log('--,-: '+(hypotenuse/Math.cos(mouAngleY))*Math.cos(mouAngleY),hypotenuse/Math.cos(mouAngleY)*dir.y)
-        
-        const t = hypotenuse/(Math.cos(cameraAngleY)*dir.z+Math.sin(cameraAngleY)*dir.x)//,dir.z
-        
-        // console.log('/ : '+hypotenuse+' '+Math.floor(Math.cos(cameraAngleY)*dir.z+Math.sin(cameraAngleY)*dir.x))
-        // console.log('t : '+t)
+      raycaster.setFromCamera(mouse, camera);
+      const dir = raycaster.ray.direction
+
+      const t = Math.abs((pos.y - set_y)/dir.y)
       
-        // 交点を計算
-        TargetDiff = choice_object.position.y - (pos.y + dir.y * t) 
-      }
+      // 交点を計算
+      TargetDiff = [
+        choice_object.position.x - (pos.x + dir.x * t),
+        choice_object.position.z - (pos.z + dir.z * t)
+      ];
+    } else {
+      raycaster.setFromCamera(mouse, camera);
+      const dir = raycaster.ray.direction
 
-      search_object = false
-      choice_object.material.color.set(0x0000ff)
+      const mouAngleY = cameraAngleY - Math.atan2(dir.x,dir.z) // マウスを3d世界の座標のベクトルに変換
+      const diff = {x: choice_object.position.x - pos.x, z: choice_object.position.z - pos.z}
+      const hypotenuse = Math.cos(Math.atan2(diff.x, diff.z) - cameraAngleY) * Math.sqrt(diff.x**2 + diff.z**2)
       
-      dragging = true;
+      // console.log('• • : '+'x, '+diff.x+'z, '+diff.z)
+      // console.log('•-• : '+hypotenuse)
+      // console.log('_./ : '+mouAngleY + ' x,'+ Math.sin(mouAngleY) + ' y,'+Math.cos(mouAngleY))
+      // console.log('--,-: '+(hypotenuse/Math.cos(mouAngleY))*Math.cos(mouAngleY),hypotenuse/Math.cos(mouAngleY)*dir.y)
       
-      GuideLine.visible = true
-      if (!move_direction_y){
-        GuideGrid.visible = true
-      }
+      const t = hypotenuse/(Math.cos(cameraAngleY)*dir.z+Math.sin(cameraAngleY)*dir.x)//,dir.z
+      
+      // console.log('/ : '+hypotenuse+' '+Math.floor(Math.cos(cameraAngleY)*dir.z+Math.sin(cameraAngleY)*dir.x))
+      // console.log('t : '+t)
+    
+      // 交点を計算
+      TargetDiff = choice_object.position.y - (pos.y + dir.y * t) 
+    }
+
+    choice_object.material.color.set(0x0000ff)
+    
+    dragging = true;
+    
+    GuideLine.visible = true
+    if (!move_direction_y){
+      GuideGrid.visible = true
     }
 
   }
@@ -1941,7 +2000,7 @@ function deactivateAllModes() {
 }
 
 function setObjectEditMode(mode) {
-  const before = objectEditMode
+  const before = mode
   objectEditMode = mode;
   if (objectEditMode === 'CREATE_NEW') {
     trackCreateNewBtn.style.backgroundColor = 'rgba(255, 255, 0, 0.5)';
@@ -1951,7 +2010,7 @@ function setObjectEditMode(mode) {
     trackCreateNewBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
     trackMoveExistingBtn.style.backgroundColor = 'rgba(255, 255, 0, 0.5)';
     if (objectEditMode === 'MOVE_EXISTING') { 
-      if (before != objectEditMode){search_point();}}
+      if (search_object != before){search_object = true; search_point();}}
   }
 }
 
@@ -2009,6 +2068,10 @@ function handleModeChangeClick() {
     EditRmode = 0
     EditRmode = toggleMode(EditRBtn,EditRicons,EditRmode);
     setMeshListOpacity(targetObjects, 1);
+    if (objectEditMode === 'MOVE_EXISTING'){
+       search_object = true
+       search_point();
+    }
     // search_point()
   } else {
     // 閲覧モード
@@ -2093,7 +2156,7 @@ window.addEventListener('touchstart', (e) => {
   
   // 視点
   search_ctrl_num(e)
-  if (e.changedTouches[0].identifier != ctrl_id){
+  if (e.changedTouches[0].identifier != ctrl_id && e.touches.length <= 2){
   lastPosition1 = { x: e.touches[e.touches.length-1].clientX, y: e.touches[e.touches.length-1].clientY }
   }
 
@@ -2102,8 +2165,9 @@ window.addEventListener('touchstart', (e) => {
   e.preventDefault();      // ← スクロールを止める
   if (objectEditMode === 'MOVE_EXISTING') { 
     dragging = null//'stand_by';
-    search_point();
+    onerun_search_point();
   }
+
   handleMouseDown();      // ← 同じ関数に渡している
 
 }, { passive: false });
@@ -2123,6 +2187,8 @@ document.addEventListener('touchmove', (e) => {
   // UI監視
   const touch = e.touches[0];
   handleMouseMove(touch.clientX, touch.clientY);
+
+  // console.log('see'+ dragging)
 
   // 視点
   if (e.touches.length === 1 && dragging === false) {
@@ -2152,7 +2218,7 @@ document.addEventListener('touchmove', (e) => {
       ctrl_ui.style.top = ctrlY - Math.cos(ctrl_angle) * Math.min(40, range) + 'px';
 
     }
-  } else if (e.touches.length === 2 && dragging === false) {
+  } else if (e.touches.length >= 2 && dragging === false) {
 
     if (ctrl_id===null){return}
     // if (e.changedTouches[1].identifier === ctrl_id){alert('ctrl1')}
@@ -2191,7 +2257,6 @@ document.addEventListener('touchmove', (e) => {
 // 物体移動完了
 document.addEventListener('mouseup', () => {
   handleMouseUp();
-  if (objectEditMode === 'MOVE_EXISTING') { search_point(); }
 });
 
 document.addEventListener('touchend',(e)=>{
@@ -2209,7 +2274,7 @@ document.addEventListener('touchend',(e)=>{
   }
 
   // 編集モード
-  handleMouseUp();
+  handleMouseUp(true);
 }
 );
 
@@ -2228,13 +2293,13 @@ document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
 document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
 
 // ========== カメラ制御変数 ========== //
-let cameraAngleY = 0;  // 水平回転
-let cameraAngleX = 0;  // 垂直回転
+let cameraAngleY = 180 * Math.PI / 180;  // 水平回転
+let cameraAngleX = -10 * Math.PI / 180;  // 垂直回転
 let moveVectorX = 0
 let moveVectorZ = 0
 
-camera.position.y += 10
-camera.position.x = -1
+camera.position.y += 15
+camera.position.z = -13
 // ========== ボタン UI ========== //
 // 状態フラグ
 let speedUp = false;
