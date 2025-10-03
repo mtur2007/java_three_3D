@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-import { TrainSystem } from './functions.js';
+import { TrainSystem } from './train_system.js';
 
 // 必ず three と同バージョンの examples モジュールを使う（あなたは three@0.169 を使っているので合わせる）
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/loaders/GLTFLoader.js';

@@ -45,12 +45,10 @@ import * as THREE from 'three';
 
 import { WorldCreat } from './world_creat.js';
 
-// import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-
-import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/loaders/GLTFLoader.js';
-
-
 const scene = new THREE.Scene();
+import { TrainSystem } from './train_system.js';
+const TSys = new TrainSystem(scene);
+
 const canvas = document.getElementById('three-canvas');
 const renderer = new THREE.WebGLRenderer({ canvas });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -60,6 +58,20 @@ renderer.shadowMap.enabled = true;                         // シャドウを有
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;         // ソフトシャドウ（見た目良し・負荷中）
 renderer.outputColorSpace = THREE.SRGBColorSpace;         // 既存の行があるなら残す
 
+// --- マップの半自動作成(路線設定) ---
+
+// 座標感覚の可視化
+// Map_pin(10,10,20,0.2,0xff0000)
+// Map_pin(10,10,10,0.5,0xff0000)
+
+// Map_pin(-10,10,20,0.2,0xff0000)
+// Map_pin(-10,10,10,0.5,0x0000ff)
+
+// Map_pin(-10,-10,20,0.2,0x0000ff)
+// Map_pin(-10,-10,10,0.5,0x0000ff)
+
+// Map_pin(10,-10,20,0.2,0x0000ff)
+// Map_pin(10,-10,10,0.5,0xff0000)
 
 // 昼の環境マップ（初期）
 renderer.outputEncoding = THREE.sRGBEncoding;
@@ -69,59 +81,6 @@ renderer.physicallyCorrectLights = true;
 // PMREMGenerator を一つだけ作って使い回すのが良い
 const pmremGenerator = new THREE.PMREMGenerator(renderer);
 pmremGenerator.compileEquirectangularShader();
-
-// 昼の環境マップ（jpg）
-// let root = null;    // ← ここでファイルスコープに宣言
-// let envMap = null;
-
-// // 共通処理：root と envMap が揃ったら適用
-// function applyEnvToRoot() {
-//   if (!root || !envMap) return;
-//   root.traverse((node) => {
-//     if (!node.isMesh) return;
-//     const mats = Array.isArray(node.material) ? node.material : [node.material];
-//     mats.forEach(m => {
-//       if (!m) return;
-//       if ('envMap' in m) {
-//         m.envMap = envMap;
-//         if ('envMapIntensity' in m) m.envMapIntensity = 1.0;
-//         m.needsUpdate = true;
-//       }
-//     });
-//     node.castShadow = true;    // 必要なら
-//     node.receiveShadow = true; // 必要なら
-//   });
-// }
-
-// // (1) 環境テクスチャ読み込み側
-// const loader = new THREE.TextureLoader();
-// loader.load('textures/citrus_orchard_road_puresky.jpg', (texture) => {
-//   texture.mapping = THREE.EquirectangularReflectionMapping;
-//   if ('colorSpace' in texture) texture.colorSpace = THREE.SRGBColorSpace;
-//   else texture.encoding = THREE.sRGBEncoding;
-
-//   scene.background = texture;
-
-//   const prefiltered = pmremGenerator.fromEquirectangular(texture).texture;
-//   scene.environment = prefiltered;
-//   envMap = prefiltered;
-
-//   // env を root に適用（root がまだ null なら何もしない）
-//   applyEnvToRoot();
-
-//   // 注意: pmremGenerator を後で再利用したければ dispose は遅らせる
-//   pmremGenerator.dispose();
-// });
-
-// // (2) モデル読み込み側（GLTF の例）
-// const gltfLoader = new GLTFLoader();
-// gltfLoader.load('model.gltf', (gltf) => {
-//   root = gltf.scene;         // ここでファイルスコープの root に代入
-//   scene.add(root);
-
-//   // env が既にあれば即適用される
-//   applyEnvToRoot();
-// });
 
 let envMap = null
 let envMapNight = null
@@ -134,7 +93,7 @@ const loader = new THREE.TextureLoader();
     envMap = texture;
   });
 
-loader.load('textures/shanghai_bund_4k.jpg', (texture_night) => {
+loader.load('textures/night.jpg', (texture_night) => {
   texture_night.mapping = THREE.EquirectangularReflectionMapping;
   texture_night.colorSpace = THREE.SRGBColorSpace;
   // scene.background = texture_night;
@@ -155,11 +114,6 @@ renderer.toneMappingExposure = 1;
 // --- ライト追加（初回のみ） ---
 const ambient = new THREE.AmbientLight(0xffffff, 0.6);
 scene.add(ambient);
-
-// // --- GridHelper 追加（初回のみ） ---
-// const grid = new THREE.GridHelper(200, 80);
-// grid.name = "Grid";
-// scene.add(grid);
 
 // --- 昼夜切替 ---
 let isNight = false;
@@ -226,9 +180,6 @@ let run_STOP = false
 let quattro = 0
 let run_num = 0
 
-import { TrainSystem } from './functions.js';
-const TSys = new TrainSystem(scene);
-
 // --- エスカレーター ---
 let path_x = 2.8
 let path_y = 6.536
@@ -243,9 +194,6 @@ const path_1 = new THREE.CatmullRomCurve3([
   new THREE.Vector3(path_x, 3.38+path_y, 5.2+path_z),
 ]);
 
-// const pathMesh = createPathMesh(path_1);
-// scene.add(pathMesh);
-
 // ③ アニメーション
 TSys.updateObjectOnPath(path_1);
 path_x = -2.8
@@ -258,9 +206,6 @@ const path_2 = new THREE.CatmullRomCurve3([
   new THREE.Vector3(path_x, 3.38+path_y, 4.7+path_z),
   new THREE.Vector3(path_x, 3.38+path_y, 5.2+path_z),
 ]);
-
-// const pathMesh_2 = createPathMesh(path_2);
-// scene.add(pathMesh_2);
 
 // ③ アニメーション
 TSys.updateObjectOnPath(path_2);
@@ -275,9 +220,6 @@ const test = new THREE.CatmullRomCurve3([
   new THREE.Vector3(path_x, 3.38+path_y, 4.7+path_z),
   new THREE.Vector3(path_x, 3.38+path_y, 5.2+path_z),
 ]);
-
-// const pathMesh_2 = createPathMesh(path_2);
-// scene.add(pathMesh_2);
 
 // ③ アニメーション
 TSys.updateObjectOnPath(test);
@@ -702,9 +644,6 @@ function TrainSettings(
       car.add(headlight.target);   // スポットライトはtargetが必須
       headlight.target.position.set(0, 0, 4);  // 向き（車両前方）に合わせて調整
       
-      // const hemiLight = new THREE.PointLight(0xffffbb,  5, 1.5);
-      // hemiLight.position.set(0, 0.5, 0);
-      // car.add(hemiLight);
     } 
     
     // ▼ パンタグラフ設置（例: 1, 4, 7 両目など）
@@ -777,6 +716,13 @@ function moveDoorsFromGroup(group, mode, distance = 0.32, duration = 2000) {
 async function runTrain(trainCars, root, track_doors, door_interval, max_speed=0.002, add_speed=0.000005, stop_point=0.5, start_position = 0) {
 
   const Equal_root = TSys.getPointsEveryM(root, 0.01); // spacing=0.1mごと（細かすぎたら25に）
+
+  console.log(Equal_root[0].y)
+  for (let i=0; i < Equal_root.length; i+=1){
+    Equal_root[i].y = Equal_root[i].y+0.95
+  }
+  console.log(Equal_root[0].y)
+
   const totalPoints = Equal_root.length;
 
   const length = root.getLength(root);
@@ -927,29 +873,25 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// --- マップの半自動作成(路線設定) ---
-
-// 座標感覚の可視化
-// Map_pin(10,10,20,0.2,0xff0000)
-// Map_pin(10,10,10,0.5,0xff0000)
-
-// Map_pin(-10,10,20,0.2,0xff0000)
-// Map_pin(-10,10,10,0.5,0x0000ff)
-
-// Map_pin(-10,-10,20,0.2,0x0000ff)
-// Map_pin(-10,-10,10,0.5,0x0000ff)
-
-// Map_pin(10,-10,20,0.2,0x0000ff)
-// Map_pin(10,-10,10,0.5,0xff0000)
-
-
 let y = 0
 let Points_0 = []
 let Points_1 = []
 let Points_2 = []
 let Points_3 = []
 
-y = 7
+let JK_upbound_point = []
+let JY_upbound_point = []
+let JY_downbound_point = []
+let JK_downbound_point = []
+
+let sinkansen_upbound_point = []
+let sinkansen_downbound_point = []
+
+let J_UJT_upbound_point = []
+let J_UJT_downbound_point = []
+
+
+y = 6
 const x_plus = 10
 const z_plus = 0
 const points = [
@@ -965,34 +907,19 @@ const points = [
 
 // --- JR中央線 track1 ---
 Points_0 = [
-
   points[0],
   points[1],
-  // points[2],
-  
-  // new THREE.Vector3(31-1, y+0.7, -135),
-  // new THREE.Vector3(20-1, y+0.5, -100),
-
   new THREE.Vector3(5.5, y, -50),
-
-  // new THREE.Vector3(4.8, y, -20),
-  // new THREE.Vector3(4.8, y, 40),
   new THREE.Vector3(4.8, y, -30),
   new THREE.Vector3(4.8, y, 50),     // お茶の水駅上空
   new THREE.Vector3(3,y, 90), // 高架にする（y = 5）
 ];
 // --- JR総武線 track2 ---
 Points_1 = [
-  
   new THREE.Vector3(-11.3, y+2.3, -170),
-
   points[2],
   points[3],
-  // new THREE.Vector3(15-0.5, y+2.3, -140),
-  // new THREE.Vector3(16-0.5, y+2.3, -101.5),
-
   new THREE.Vector3(3-0.5, y, -50),
-
   new THREE.Vector3(0.8, y, -25),
   new THREE.Vector3(0.8, y, 50),
   new THREE.Vector3(-2, y, 90),
@@ -1000,21 +927,11 @@ Points_1 = [
 
 // --- JR総武線 track3 ---
 Points_2 = [
-
   new THREE.Vector3(-13.3, y+2.3, -170),
-
   points[4],
   points[5],
-
-  // new THREE.Vector3(13, y+2.3, -140),
-  // new THREE.Vector3(14, y+2.3, -101.5),
-
   new THREE.Vector3(1, y, -50),
-  // new THREE.Vector3(-0.8, y, -30),
-
   new THREE.Vector3(-0.8, y, -20),
-  // new THREE.Vector3(-0.8, y, 40),
-
   new THREE.Vector3(-0.8, y, 50),     // お茶の水駅上空
   new THREE.Vector3(-4,y, 90), // 高架にする（y = 5）
 ];
@@ -1023,26 +940,156 @@ Points_2 = [
 Points_3 = [ 
   points[6],
   points[7],
-  // points[8],
-  // points[9],
-  // points[10],
-  // points[11],
-  // new THREE.Vector3(28, y+0.4, -135),
-  // new THREE.Vector3(14.5, y-0.4, -105),
   new THREE.Vector3(-2.5, y, -50),
-  
   new THREE.Vector3(-4.8, y, -20),
-  // new THREE.Vector3(-4.8, y, 30),
-
   new THREE.Vector3(-4.8, y, 40),
   new THREE.Vector3(-9, y, 90),
 ];
+
+// --- JR京浜東北線(JK) 上り(upbound) ---
+JK_upbound_point = [
+  new THREE.Vector3(-111.76990362335863, y+0, -295.55533787884985),
+  new THREE.Vector3(-89.28536046011544, y+0, -298.1541893646885),
+  new THREE.Vector3(-57.711307454803375, y+0, -301.1911328283426),
+  new THREE.Vector3(-4.018352121806821, y+0, -311.1907667542943),
+  new THREE.Vector3(37.11147026940992, y+0, -321.31858416862843),
+  new THREE.Vector3(61.76861895808672, y+0, -325.94921343406867),
+  new THREE.Vector3(96.96201204744818, y+0, -329.0490279551624),
+  new THREE.Vector3(162.70344013787383, y+0, -328.0021231693154),
+  new THREE.Vector3(247.85810344992842, y+0, -323.93439483106204),
+  new THREE.Vector3(287.7631243456569, y+0, -319.77343263388633),
+  new THREE.Vector3(324.5430417668258, y+0, -317.28342052560583),
+  new THREE.Vector3(368.5693719852972, y+0, -316.4539250192787),
+  new THREE.Vector3(394.06074396630294, y+0, -317.7655486002887),
+];
+
+
+JY_upbound_point = [
+  new THREE.Vector3(-125.21339859227305, y+0, -296.69577623835823),
+  new THREE.Vector3(-94.8777375074411, y+0, -300.3658537739735),
+  new THREE.Vector3(-80.2605922089954, y+0, -302.6421916314635),
+  new THREE.Vector3(-60.97801415541439, y+0, -305.76947418492296),
+  new THREE.Vector3(-5.442546655264097, y+0, -315.8814542201736),
+  new THREE.Vector3(35.41232161533707, y+0, -323.75981941243475),
+  new THREE.Vector3(61.197688730203055, y+0, -327.55845607928376),
+  new THREE.Vector3(96.51938083502435, y+0, -330.48356730370244),
+  new THREE.Vector3(162.21662969199488, y+0, -329.3996829195323),
+  new THREE.Vector3(247.4301434594096, y+0, -325.4854096663424),
+  new THREE.Vector3(288.9963926349608, y+0, -323.33523864671946),
+  new THREE.Vector3(323.88760471246167, y+0, -320.7344575653564),
+  new THREE.Vector3(368.30682704399777, y+0, -318.2831628078685),
+  new THREE.Vector3(394.09187011088176, y+0, -319.4755886056227),
+];
+
+
+JY_downbound_point = [
+  new THREE.Vector3(-122.17215393661779, y+0, -298.8925460232571),
+  new THREE.Vector3(-80.42881516425733, y+0, -304.82795056563515),
+  new THREE.Vector3(-5.826757239045998, y+0, -318.15368741852643),
+  new THREE.Vector3(34.84569022775433, y+0, -325.76125009407633),
+  new THREE.Vector3(60.79020296479766, y+0, -329.30590534698786),
+  new THREE.Vector3(96.18968993409968, y+0, -332.07909452761186),
+  new THREE.Vector3(161.91727922480115, y+0, -330.9822439341698),
+  new THREE.Vector3(247.10434070276528, y+0, -327.26442699646265),
+  new THREE.Vector3(289.0982280344045, y+0, -325.2560382392302),
+  new THREE.Vector3(356.8688576378576, y+0, -322.30395429003124),
+  new THREE.Vector3(399.59040208745387, y+0, -320.1676357058684),
+];
+
+JK_downbound_point = [
+  new THREE.Vector3(-124.43022443921315, y+0, -300.3020874375335),
+  new THREE.Vector3(-81.16116758122712, y+0, -309.17838157877924),
+  new THREE.Vector3(-61.176654786959716, y+0, -313.612216326006),
+  new THREE.Vector3(8.215521387265273, y+0, -325.5308680196141),
+  new THREE.Vector3(94.9341065540915, y+0, -333.71399243406285),
+  new THREE.Vector3(161.62389558698544, y+0, -332.71128002847263),
+  new THREE.Vector3(221.4487986731928, y+0, -330.9206960719724),
+  new THREE.Vector3(263.70157276228207, y+0, -331.7715381178346),
+  new THREE.Vector3(289.02060154904507, y+0, -331.68351199544094),
+  new THREE.Vector3(324.6413521542111, y+0, -327.6754938537136),
+  new THREE.Vector3(357.5320762061322, y+0, -323.7494132257973),
+  new THREE.Vector3(399.1569336423814, y+0, -321.6563331013228),
+];
+
+J_UJT_upbound_point = [
+  new THREE.Vector3(-120.01522869733687, y+0, -302.9188732688797),
+  new THREE.Vector3(-82.09186013719402, y+0, -310.7281630112079),
+  new THREE.Vector3(-58.947028586666164, y+0, -316.1657368440674),
+  new THREE.Vector3(8.489518914759882, y+0, -327.4768270890304),
+  new THREE.Vector3(94.98860814005752, y+0.789958964891393, -335.41675188918447),
+  new THREE.Vector3(170.61735648548975, y+2.631426048102636, -334.0304355439938),
+  new THREE.Vector3(231.00421612962472, y+3.2085414706180426, -332.4570173414121),
+  new THREE.Vector3(266.3810561630889, y+3.695212192977211, -333.2835940670695),
+  new THREE.Vector3(291.88024877381997, y+3.387685383703271, -332.51227713636956),
+  new THREE.Vector3(327.45730771861037, y+3.368951525840888, -328.6081402659737),
+  new THREE.Vector3(366.6797428823438, y+2.6516091213290274, -324.7058647644941),
+  new THREE.Vector3(404.0778447587348, y+2.1572608865051848, -322.15962385213055),
+];
+
+J_UJT_downbound_point = [
+  new THREE.Vector3(-119.77980725578028, y+0, -304.61572140275007),
+  new THREE.Vector3(-83.35126362095043, y+0, -312.1580862515084),
+  new THREE.Vector3(-59.48419187511876, y+0, -317.925500389709),
+  new THREE.Vector3(8.799902422258866, y+0, -329.33207033365204),
+  new THREE.Vector3(94.72769020659211, y+0.789958964891393, -337.06032212652366),
+  new THREE.Vector3(172.4969543843784, y+2.631426048102636, -335.53647208749794),
+  new THREE.Vector3(230.72892309903594, y+3.2085414706180426, -334.19845517414586),
+  new THREE.Vector3(266.588538621058, y+3.695212192977211, -335.01404080819106),
+  new THREE.Vector3(292.0234571425137, y+3.3876853837032694, -334.68245942245693),
+  new THREE.Vector3(328.14684315034026, y+3.368951525840888, -330.6026061310047),
+  new THREE.Vector3(366.5493245858342, y+2.6516091213290274, -326.2626751173474),
+  new THREE.Vector3(404.5031641357191, y+2.1572608865051848, -323.870955377407),
+];
+
+sinkansen_upbound_point = [
+  new THREE.Vector3(-117.80038662122091, y-1.1378560032556138, -308.0822973340168),
+  new THREE.Vector3(-43.804755338386585, y-1.2589600310431734, -325.73815144008734),
+  new THREE.Vector3(-12.249485519096753, y-0.8082158373489516, -331.030730959448),
+  new THREE.Vector3(29.164320175824187, y-0.2065329936222744, -335.9110014242368),
+  new THREE.Vector3(96.17907740615152, y+0, -340.3307306113299),
+  new THREE.Vector3(148.0044984457235, y+0.2261471373060342, -338.2284969602672),
+  new THREE.Vector3(185.49776590926083, y+0.495248588404289, -334.9896528965828),
+  new THREE.Vector3(227.06322572615449, y+1.2280396483740894, -333.5313586165467),
+  new THREE.Vector3(262.9788547470736, y+1.2520147649648683, -334.33302915427737),
+  new THREE.Vector3(290.7642685239293, y+1.154187254070644, -334.37698409462143),
+  new THREE.Vector3(325.49879946980997, y+0.788423129441572, -330.561524390554),
+  new THREE.Vector3(366.3108366923121, y+0.257075531569086, -327.20410351982184),
+  new THREE.Vector3(406.3293279112425, y+0, -327.2559831011056),
+];
+  
+sinkansen_downbound_point = [
+  new THREE.Vector3(-117.91571602764624, y-1.1378560032556138, -310.02676011747116),
+  new THREE.Vector3(-43.710394568340334, y-1.2589600310431734, -327.56791979462525),
+  new THREE.Vector3(-11.897866325379892, y-0.8082158373489516, -332.70875051820747),
+  new THREE.Vector3(29.680698889210568, y-0.2065329936222744, -337.6380230626265),
+  new THREE.Vector3(96.51592973835274, y+0, -342.0452285480721),
+  new THREE.Vector3(147.98442160890954, y+0.2261471373060342, -339.9166111836655),
+  new THREE.Vector3(185.0950260588999, y+0.495248588404289, -336.8849097480831),
+  new THREE.Vector3(226.33041713930058, y+1.2280396483740894, -335.3565345694915),
+  new THREE.Vector3(262.5745484664577, y+1.2520147649648683, -336.160613390138),
+  new THREE.Vector3(290.7558015205605, y+1.154187254070644, -336.41475365974344),
+  new THREE.Vector3(325.8841863700687, y+0.788423129441572, -332.2026513481826),
+  new THREE.Vector3(367.3440010679313, y+0.257075531569086, -329.3563162418554),
+  new THREE.Vector3(406.0943207437069, y+0, -329.2244867534149),
+];
+
 
 // 指定したポイントから線(線路の軌道)を生成
 const line_1 = new THREE.CatmullRomCurve3(Points_0);
 const line_2 = new THREE.CatmullRomCurve3(Points_1);
 const line_3 = new THREE.CatmullRomCurve3(Points_2);
 const line_4 = new THREE.CatmullRomCurve3(Points_3);
+
+const JK_upbound = new THREE.CatmullRomCurve3(JK_upbound_point);
+const JY_upbound = new THREE.CatmullRomCurve3(JY_upbound_point);
+const JY_downbound = new THREE.CatmullRomCurve3(JY_downbound_point);
+const JK_downbound = new THREE.CatmullRomCurve3(JK_downbound_point);
+
+const J_UJT_upbound = new THREE.CatmullRomCurve3(J_UJT_upbound_point);
+const J_UJT_downbound = new THREE.CatmullRomCurve3(J_UJT_downbound_point);
+
+const sinkansen_upbound = new THREE.CatmullRomCurve3(sinkansen_upbound_point);
+const sinkansen_downbound = new THREE.CatmullRomCurve3(sinkansen_downbound_point);
 
 function sliceCurvePoints(curve, startRatio, endRatio, resolution = 1000) {
   const points = curve.getPoints(resolution);
@@ -1052,20 +1099,145 @@ function sliceCurvePoints(curve, startRatio, endRatio, resolution = 1000) {
   return new THREE.CatmullRomCurve3(sliced);
 }
 
-const start = 0.4;
-const end = 0.8;
-const track1 = sliceCurvePoints(line_1, start, end);
-const track4 = sliceCurvePoints(line_4, start, end+0.04);
-const start2 = 0.5;
-const end2 = 0.85;
-const track2 = sliceCurvePoints(line_2, start2, end2);
-const track3 = sliceCurvePoints(line_3, start2, end2);
+function findCurveRange(curve, targetA, targetB, { axis = 'z', resolution = 1000 } = {}) {
+  const sampledPoints = curve.getPoints(resolution);
+  const lastIndex = sampledPoints.length - 1;
 
-TSys.createTrack(line_1, 0xff0000)
-TSys.createTrack(line_2, 0x772200)
+  const isVectorLike = (value) =>
+    value instanceof THREE.Vector3 ||
+    (value && typeof value === 'object' && ('x' in value || 'y' in value || 'z' in value));
 
-TSys.createTrack(line_3, 0x002277)
-TSys.createTrack(line_4, 0x0000ff)
+  const useVectorTargets = isVectorLike(targetA) && isVectorLike(targetB);
+
+  const getComponent = (value, key) => {
+    if (value instanceof THREE.Vector3) {
+      return value[key];
+    }
+    if (value && typeof value === 'object' && key in value) {
+      return value[key];
+    }
+    return undefined;
+  };
+
+  const hasAnyComponent = (value) => ['x', 'y', 'z'].some((key) => getComponent(value, key) !== undefined);
+
+  const axisKey = axis === 'x' ? 'x' : axis === 'y' ? 'y' : 'z';
+
+  const findNearestIndex = (target, searchStart = 0, searchEnd = lastIndex) => {
+    let closestIndex = searchStart;
+    let smallestMetric = Infinity;
+
+    if (useVectorTargets) {
+      if (!hasAnyComponent(target)) {
+        return closestIndex;
+      }
+
+      for (let i = searchStart; i <= searchEnd; i++) {
+        const point = sampledPoints[i];
+        let metric = 0;
+        let usedComponents = 0;
+
+        ['x', 'y', 'z'].forEach((key) => {
+          const component = getComponent(target, key);
+          if (component !== undefined) {
+            const diff = point[key] - component;
+            metric += diff * diff;
+            usedComponents += 1;
+          }
+        });
+
+        if (usedComponents === 0) {
+          continue;
+        }
+
+        if (metric < smallestMetric) {
+          smallestMetric = metric;
+          closestIndex = i;
+        }
+      }
+    } else {
+      for (let i = searchStart; i <= searchEnd; i++) {
+        const diff = Math.abs(sampledPoints[i][axisKey] - target);
+        if (diff < smallestMetric) {
+          smallestMetric = diff;
+          closestIndex = i;
+        }
+      }
+    }
+
+    return closestIndex;
+  };
+
+  let firstIndex = findNearestIndex(targetA);
+  let secondIndex = findNearestIndex(targetB);
+
+  if (!useVectorTargets) {
+    if (targetA <= targetB && secondIndex < firstIndex) {
+      secondIndex = findNearestIndex(targetB, firstIndex, lastIndex);
+    } else if (targetA > targetB && secondIndex > firstIndex) {
+      secondIndex = findNearestIndex(targetB, 0, firstIndex);
+    }
+  }
+
+  let startIndex = Math.min(firstIndex, secondIndex);
+  let endIndex = Math.max(firstIndex, secondIndex);
+
+  if (startIndex === endIndex) {
+    if (endIndex < lastIndex) {
+      endIndex += 1;
+    } else if (startIndex > 0) {
+      startIndex -= 1;
+    }
+  }
+
+  const slicePoints = sampledPoints
+    .slice(startIndex, endIndex + 1)
+    .map((point) => point.clone());
+
+  const Range = {
+    startIndex,
+    endIndex,
+    startRatio: startIndex / lastIndex,
+    endRatio: endIndex / lastIndex,
+    startPoint: sampledPoints[startIndex].clone(),
+    endPoint: sampledPoints[endIndex].clone(),
+    slicePoints,
+    sliceCurve: slicePoints.length > 1 ? new THREE.CatmullRomCurve3(slicePoints) : null,
+  };
+  
+  return Range.sliceCurve ?? sliceCurvePoints(curve, Range.startRatio, Range.endRatio);
+}
+
+const station_s = { x:1.9018166962470082, y:6.394628223749855 , z:-49.67098084774971 }
+const station_loof_f = { x:-0.3852393328186856 , y:6.394628223749855 , z:-3.535125641715606 }
+const station_f = { x:-0.023948863771414863, y:6.394628223749855, z:47.51354120550737 }
+const wall_f = {x:3.5989745081382956, y:6.394628223749855, z:-97.26135689524132}
+const tunnel_f ={ x: 6.600868195728852, y: 7.382920205399699, z: -114.92055445840528}
+
+const track1 = findCurveRange(line_1, station_s, station_f)
+const track2 = findCurveRange(line_2, station_s, station_f)
+const track3 = findCurveRange(line_3, station_s, station_f)
+const track4 = findCurveRange(line_4, station_s, station_f)
+
+const roof_track1 = findCurveRange(line_1, station_s, station_loof_f);
+const roof_track2 = findCurveRange(line_2, station_s, station_loof_f);
+const roof_track3 = findCurveRange(line_3, station_s, station_loof_f);
+const roof_track4 = findCurveRange(line_4, station_s, station_loof_f);
+
+const wall_track1 = findCurveRange(line_1, station_s, wall_f)
+const wall_track2 = findCurveRange(line_2, station_s, wall_f)
+
+const wall_track3 = findCurveRange(line_3, station_s, wall_f)
+const wall_track4 = findCurveRange(line_4, station_s, wall_f)
+
+const tunnel_1 = findCurveRange(line_4, wall_f, tunnel_f)
+const tunnel_2 = findCurveRange(line_4, wall_f, tunnel_f)
+
+TSys.createTrack(line_1, 1.83, 0xff0000)
+TSys.createTrack(line_2, 1.83, 0x772200)
+
+TSys.createTrack(line_3, 1.83, 0x002277)
+TSys.createTrack(line_4, 1.83, 0x0000ff)
 
 // 高架(柱/床版)を生成
 const interval = 1
@@ -1090,16 +1262,7 @@ TSys.createStation(track1,track2,200,y,0.7, '|[]|') // 島式 |[]| : 相対式 [
 TSys.createStation(track3,track4,200,y,0.7, '|[]|') // 島式 |[]| : 相対式 []||[]
 
 // 駅(屋根)を生成
-const roof_start = 0.4;
-const roof_end = 0.675;
-const roof_track1 = sliceCurvePoints(line_1, roof_start, roof_end);
-const roof_start2 = 0.5;
-const roof_end2 = 0.725;
-const roof_track2 = sliceCurvePoints(line_2, roof_start2, roof_end2);
 TSys.placePlatformRoof(roof_track1,roof_track2,y+1.4,10)
-
-const roof_track3 = sliceCurvePoints(line_3, roof_start2, roof_end2);
-const roof_track4 = sliceCurvePoints(line_4, roof_start, 0.6846);
 TSys.placePlatformRoof(roof_track3,roof_track4,y+1.4,10)
 
 // 駅(ホームドア)を生成
@@ -1114,30 +1277,17 @@ const track3_doors = TSys.placePlatformDoors(track3, 0.9, door_interval, 'left')
 const track4_doors = TSys.placePlatformDoors(track4, 0.9, door_interval, 'right');  // 左側に設置
 
 // 壁の生成
-const wall_start = 0.24;
-const wall_end = 0.42;
-const wall_track1 = sliceCurvePoints(line_1, wall_start, wall_end);
-const wall_track2 = sliceCurvePoints(line_2, 0.37, 0.5);
-TSys.createWall(wall_track1,wall_track2,40,0.8,-0.8,-0.9,-0.9)
-const wall_track3 = sliceCurvePoints(line_3, 0.37, 0.5);
-const wall_track4 = sliceCurvePoints(line_4, wall_start, wall_end);
-TSys.createWall(wall_track3,wall_track4,40,0.8,-0.8,-0.9,-0.9)
+TSys.createWall(wall_track1,wall_track2,40,0.85,-0.85, 0.1, 0.1)
+TSys.createWall(wall_track3,wall_track4,40,0.85,-0.85, 0.1, 0.1)
 
-const tunnel_start = 0.16;
-const tunnel_end = 0.24;
-// const tunnel_start = 0.25;
-// const tunnel_end = 0.7;
-const tunnel_1 = sliceCurvePoints(line_4, tunnel_start, tunnel_end);
-// const points_3 = sliceCurvePoints(line_4, tunnel_start, tunnel_end);
-const tunnel_2 = sliceCurvePoints(line_4, tunnel_start, tunnel_end);
 const quantity = 3
 
-TSys.createWall(tunnel_1,tunnel_1,40,-0.9,-0.9,-1,1.5)
-TSys.createWall(tunnel_1,tunnel_1,40,0.9,0.9,-1,1.5)
+TSys.createWall(tunnel_1,tunnel_1,40,-0.9,-0.9,0,2.2)
+TSys.createWall(tunnel_1,tunnel_1,40,0.9,0.9,0,2.2)
 
-TSys.createWall(line_4,line_4,40,0.885,2,-0.95,-6)
-TSys.createWall(line_4,line_4,40,10,10,-6,-4)
-TSys.createWall(line_4,line_4,40,10,30,-4,-4)
+TSys.createWall(line_4,line_4,40,0.885,2,0,-4) // 線路側:壁
+TSys.createWall(line_4,line_4,40,10,10,-4,-3) // 対岸側:壁
+TSys.createWall(line_4,line_4,40,10,30,-3,-3) // 対岸側:地面
 
 const water_material = new THREE.MeshStandardMaterial({
   color: 0x005555,         // 白ベース
@@ -1146,7 +1296,7 @@ const water_material = new THREE.MeshStandardMaterial({
   envMapIntensity: 1,    // 環境マップの反射強度（あるとリアル）
   side: THREE.DoubleSide   // 両面描画（必要なら）
 });
-TSys.createWall(line_4,line_4,40,2,10,-5,-5,0x003355,water_material)
+TSys.createWall(line_4,line_4,40,2,10,-4,-4,0x003355,water_material)
 
 const board_length_1 = tunnel_1.getLength(line_4)/quantity;
 const board_length_2 = tunnel_2.getLength(line_4)/quantity;
@@ -1195,7 +1345,7 @@ const pole_angle = point_data[1]
 const Poles = TSys.createCatenaryPole(0,3.2,1.4,2.3, 5)
 for(let i=0; i<Poles.children.length; i++){
   Poles.children[i].rotation.y += pole_angle[i]
-  Poles.children[i].position.set(pole_line[i].x,pole_line[i].y-1,pole_line[i].z)
+  Poles.children[i].position.set(pole_line[i].x,pole_line[i].y,pole_line[i].z)
 }
 scene.add(Poles)
 
@@ -1208,7 +1358,7 @@ const pole_angle2 = point_data2[1]
 const Poles2 = TSys.createCatenaryPole(2.8,2.8,3.5,2.3, 16)
 for(let i=0; i<Poles2.children.length; i++){
   Poles2.children[i].rotation.y += pole_angle2[i]
-  Poles2.children[i].position.set(pole_line2[i].x,pole_line2[i].y-1,pole_line2[i].z)
+  Poles2.children[i].position.set(pole_line2[i].x,pole_line2[i].y,pole_line2[i].z)
 }
 scene.add(Poles2)
 
@@ -1279,7 +1429,6 @@ const reversedCurve_3 = new THREE.CatmullRomCurve3(
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // ボタン取得
 let button = document.getElementById("toggle-crossover");
-let crossoverRequested = false;
 let run_quattro = 0
 // クアトロ交差を実行する関数
 async function startQuadrupleCrossDemo() {
@@ -1344,15 +1493,11 @@ async function startQuadrupleCrossDemo() {
 }
 
 document.getElementById("toggle-crossover").addEventListener("click", () => {
-  // camera.position.set(-5, 8, -60);
-  // cameraAngleX = 0.1
-  // cameraAngleY = 2.3;
-
-  startQuadrupleCrossDemo();  // ← ここで関数を呼び出す
+  startQuadrupleCrossDemo();
 });
 
 document.getElementById("toggle-crossover").addEventListener("touchstart", () => {
-  startQuadrupleCrossDemo();  // ← ここで関数を呼び出す
+  startQuadrupleCrossDemo();
 });
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1424,6 +1569,7 @@ function stopFrontView() {
 const fbuttons = document.querySelectorAll(".frontViewBtn");
 
 fbuttons.forEach(button => {
+
   button.addEventListener("click", () => {
     const trainNum = parseInt(button.dataset.train);
     const selectedCar = trainCars[trainNum];
@@ -1478,6 +1624,8 @@ cameraSub.lookAt(0, 0, 0);
 const cube_geometry = new THREE.BoxGeometry();
 const cube_material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
 const cube = new THREE.Mesh(cube_geometry, cube_material);
+const targetObjects = [];
+const targetPins = [];
 
 // 線描画
 function createLine(p1, p2, color = 0xff0000) {
@@ -1504,9 +1652,141 @@ function handleMouseMove(x, y) {
   mouse.y = -( clientY / h ) * 2 + 1;
 }
 
+// 物体の表示/非表示
+function setMeshListOpacity(list, opacity) {
+  list.forEach((mesh) => {
+    if (!mesh || !mesh.isMesh) { return; }
+
+    const applyOpacity = (material) => {
+      if (!material) { return; }
+      if ('opacity' in material) {
+        material.opacity = opacity;
+      }
+      material.transparent = opacity < 1;
+    };
+
+    if (Array.isArray(mesh.material)) {
+      mesh.material.forEach(applyOpacity);
+    } else {
+      applyOpacity(mesh.material);
+    }
+
+    mesh.visible = opacity > 0;
+  });
+}
+
+// 物体の削除
+function removeMeshes(list) {
+  const disposeMaterial = (material) => {
+    if (!material) { return; }
+    if (Array.isArray(material)) {
+      material.forEach(disposeMaterial);
+      return;
+    }
+    if (typeof material.dispose === 'function') {
+      material.dispose();
+    }
+  };
+
+  for (let i = list.length - 1; i >= 0; i--) {
+    const mesh = list[i];
+    if (!mesh || !mesh.isMesh) { continue; }
+
+    if (mesh.parent) {
+      mesh.parent.remove(mesh);
+    }
+
+    if (mesh.geometry && typeof mesh.geometry.dispose === 'function') {
+      mesh.geometry.dispose();
+    }
+
+    disposeMaterial(mesh.material);
+
+    list.splice(i, 1);
+  }
+}
+
+function markPointsWithPins(pointsSource, store = targetPins) {
+  if (!Array.isArray(pointsSource)) { return []; }
+
+  pointsSource.forEach((point) => {
+    if (!point) { return; }
+    const pin = TSys.Map_pin(point.x, point.z, point.y, 0.1);
+    scene.add(pin);
+      
+    }
+  );
+}
+
+function resetMeshListOpacity(list, pointsSource) {
+  if (!Array.isArray(list)) { return; }
+
+  removeMeshes(list);
+  removeMeshes(targetPins);
+
+  if (!Array.isArray(pointsSource)) { return; }
+
+  pointsSource.forEach((point) => {
+    if (!point) { return; }
+    const mesh = new THREE.Mesh(cube_geometry, cube_material.clone());
+    mesh.position.copy(point);
+    scene.add(mesh);
+    list.push(mesh);
+  });
+
+}
+
+TSys.createRail(JK_upbound)
+TSys.createRail(JY_upbound)
+TSys.createRail(JY_downbound)
+TSys.createRail(JK_downbound)
+
+TSys.createWall(JK_upbound, JK_downbound, 40,1,-1,0,0, 0x6d5c4e)
+
+TSys.createRail(J_UJT_upbound)
+TSys.createRail(J_UJT_downbound)
+TSys.createWall(J_UJT_upbound, J_UJT_upbound, 40,0.9,0.9,0.8,0, 0x999999)
+TSys.createWall(J_UJT_downbound, J_UJT_downbound, 40,-0.9,-0.9,0.8,0, 0x999999)
+
+TSys.createRail(sinkansen_upbound)
+TSys.createRail(sinkansen_downbound)
+
+TSys.generateElevated(sinkansen_upbound, 10, interval);
+TSys.generateElevated(sinkansen_downbound, 10, interval);
+TSys.createWall(sinkansen_upbound, sinkansen_upbound, 40,0.9,0.9,0.8,0, 0x999999)
+TSys.createWall(sinkansen_downbound, sinkansen_downbound, 40,-0.9,-0.9,0.8,0, 0x999999)
+
+// TSys.sampleCurveCoordinates(sinkansen_upbound,{x: 187.35576904181207, y: 6.550897661798941, z: -335.1433442621323},0*Math.PI/180)//1.54)
+
+TSys.generateElevated(J_UJT_upbound, 10, interval, sinkansen_upbound);
+TSys.generateElevated(J_UJT_downbound, 10, interval);
+
+// TSys.generateElevated(JK_upbound, 10, interval);
+
+// const cube_clone = new THREE.Mesh(cube_geometry, cube_material.clone());
+// cube_clone.position.set(point.x, point.y, point.z);
+// scene.add(cube_clone);
+// targetObjects.push(cube_clone);
+// drawingObject();
+
+// markPointsWithPins(JK_upbound_point);
+// markPointsWithPins(JY_upbound_point);
+
+// markPointsWithPins(JY_downbound_point);
+// markPointsWithPins(JK_downbound_point);
+
+// markPointsWithPins(J_UJT_upbound_point);
+// markPointsWithPins(J_UJT_downbound_point);
+
+// markPointsWithPins(sinkansen_upbound_point);
+// markPointsWithPins(sinkansen_downbound_point);
+
+
 // レイキャストを作成
 const raycaster = new THREE.Raycaster();
-const targetObjects = [];
+resetMeshListOpacity(targetObjects, JK_downbound_point);
+setMeshListOpacity(targetObjects, 0);
+
 // for (let i = 1; i < 4; i++) {
 //   const cube = new THREE.Mesh(geometry, material.clone()); // 色変更できるようにclone
 //   cube.position.set(i * 2, 0.5, 0); // X方向に2ずつ離して配置
@@ -1601,6 +1881,8 @@ function drawingObject(){
   if (targetObjects.length < 2){return}
   const Points = targetObjects.map(obj => obj.position.clone());
 
+  console.log(Points)
+
   // 指定したポイントから線(線路の軌道)を生成
   const line = new THREE.CatmullRomCurve3(Points);
 
@@ -1636,6 +1918,8 @@ GuideLine.visible = false
 GuideGrid.visible = false
 GuideGrid_Center_x.visible = false
 GuideGrid_Center_z.visible = false
+
+console.log(new THREE.Vector3(5.5, y, -50))
 
 let choice_object = false
 let search_object = false
@@ -1781,7 +2065,6 @@ function coord_DisplayTo3D(Axis_num=false){
     raycaster.setFromCamera(mouse, camera);
     const dir = raycaster.ray.direction
 
-    const mouAngleY = cameraAngleY - Math.atan2(dir.x,dir.z) // マウスを3d世界の座標のベクトルに変換
     const diff = {x: Axis_num.x - pos.x, z: Axis_num.z - pos.z}
     const hypotenuse = Math.cos(Math.atan2(diff.x, diff.z) - cameraAngleY) * Math.sqrt(diff.x**2 + diff.z**2)
     
@@ -1853,6 +2136,8 @@ async function handleMouseUp(mobile = false) {
         } else {
           point = coord_DisplayTo3D(choice_object.position)
         }
+
+        // console.log(targetObjects)
 
         choice_object.position.set(point.x,point.y,point.z)
         choice_object.material.color.set(0xff0000) // Reset color to red
@@ -1958,16 +2243,6 @@ async function handleMouseDown() {
     }
 
   }
-}
-
-function setMeshListOpacity(list, opacity) {
-  list.forEach(mesh => {
-    if (mesh.isMesh) {
-      // mesh.material.transparent = true;
-      // mesh.material.opacity = opacity;
-      mesh.visible = !mesh.visible
-    }
-  });
 }
 
 const ModeChangeBtn = document.getElementById("mode-change")
