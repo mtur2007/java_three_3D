@@ -174,7 +174,7 @@ export class TrainSystem {
     const sampledPoints = this.getPointsEveryM(curve, interval);
     const obstacle = [];
     rotation = this.normalizeRad(rotation)
-    console.log(rotation)
+    console.log(position)
 
     let start_index = null
 
@@ -191,7 +191,7 @@ export class TrainSystem {
       const organize_point_y = Math.abs(Math.sin(angle) * range)
       const organize_point_x = Math.abs(Math.cos(angle) * range)
 
-      if (organize_point_y <= 2 && organize_point_x <= 2.4){
+      if (organize_point_y <= 2 && organize_point_x <= 3){
         if (start_index === null){start_index = i}
         // coordinates.push({ x, y, z });
       } else if (start_index != null){
@@ -212,7 +212,7 @@ export class TrainSystem {
           const organize_point_y = Math.abs(Math.sin(angle) * range)
           const organize_point_x = Math.cos(angle) * range
 
-          if (0 < organize_point_x && organize_point_y < min_distance){
+          if (organize_point_y < min_distance){
             min_distance = organize_point_y
             min_point = point
             min_index = detail_i
@@ -235,8 +235,21 @@ export class TrainSystem {
           console.log(Math.sqrt(((1 / Math.sin(obstacle_angle)) * Math.cos(obstacle_angle))**2 + 1))
           
           console.log(min_point.x+Math.sin(rotation)*obstacle_len,min_point.z+Math.cos(rotation)*obstacle_len,min_point.y)
-          this.Map_pin(min_point.x+Math.sin(rotation)*obstacle_len,min_point.z+Math.cos(rotation)*obstacle_len,min_point.y)
-          
+          // this.Map_pin(min_point.x+Math.sin(rotation)*obstacle_len,min_point.z+Math.cos(rotation)*obstacle_len,min_point.y)
+          this.createBridgePillar(min_point.x+Math.sin(rotation)*obstacle_len, min_point.z+Math.cos(rotation)*obstacle_len, position.y);
+          const avoid_point = {
+            x: min_point.x+Math.sin(rotation)*obstacle_len,
+            y: position.y,
+            z: min_point.z+Math.cos(rotation)*obstacle_len
+          }
+          const point = {
+            x: position.x,
+            y: position.y,
+            z: position.z
+          }
+          this.scene.add(this.createBoxBetweenPoints3D(point,avoid_point,0.15,0.7))
+
+
           if (obstacle.length === 0){
             obstacle.push(min_point)
           } else {
@@ -389,7 +402,14 @@ export class TrainSystem {
     }  
 
   //物体を生成する補助関数
-  createBoxBetweenPoints3D(p1, p2, thickness, depth, material) {
+  createBoxBetweenPoints3D(p1, p2, thickness, depth, material = new THREE.MeshStandardMaterial({//color: 0x3399cc 
+    color: 0xaaaaaa,      // 暗めのグレー（鉄色）
+    metalness: 0.8,       // 金属光沢最大
+    roughness: 0.1,       // 少しザラザラ（低くするとツルツル）
+    envMapIntensity: 1.0,    // 環境マップの反射強度（envMapを使うなら）
+    side: THREE.FrontSide,
+  })
+) {
     const dir = new THREE.Vector3().subVectors(p2, p1); // 方向ベクトル
     const length = dir.length(); // 距離（ボックスの長さ）
     const center = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5); // 中心点
@@ -409,9 +429,9 @@ export class TrainSystem {
   // --- 鉄橋用ユーティリティ ---
   // 柱
   createBridgePillar(x, z, height = 5) {
-    const geometry = new THREE.BoxGeometry(0.2, height, 0.2);
+    const geometry = new THREE.BoxGeometry(0.7, height, 0.35);
     const material = new THREE.MeshStandardMaterial({ 
-      color: 0x555555,
+      color: 0x999999,
       side: THREE.FrontSide
     });
     const pillar = new THREE.Mesh(geometry, material);
@@ -473,12 +493,16 @@ export class TrainSystem {
 
     for (let i = 0; i < points.length; i += pillarInterval) {
       const p = points[i];
-      this.createBridgePillar(p.x, p.z, p.y);
-
-      const l_p = {x:p.x, y:p.y, z:p.z}
-
-      if (obstacle){this.sampleCurveCoordinates(obstacle, l_p, angles_y[i], interval = 1)}
-  
+    if (!obstacle){
+        this.createBridgePillar(p.x, p.z, p.y);
+      } else {
+        const l_p = {x:p.x, y:p.y, z:p.z}
+        const len = this.sampleCurveCoordinates(obstacle, l_p, angles_y[i], interval = 1).length
+        if (len === 0){
+          this.createBridgePillar(p.x, p.z, p.y);
+        }
+      }
+    
       if (i + pillarInterval < points.length) {
         const p2 = points[i + pillarInterval];
         this.createDeckSlab(p, p2);

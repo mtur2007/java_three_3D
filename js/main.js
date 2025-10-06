@@ -1758,8 +1758,8 @@ TSys.createWall(sinkansen_downbound, sinkansen_downbound, 40,-0.9,-0.9,0.8,0, 0x
 
 // TSys.sampleCurveCoordinates(sinkansen_upbound,{x: 187.35576904181207, y: 6.550897661798941, z: -335.1433442621323},0*Math.PI/180)//1.54)
 
-TSys.generateElevated(J_UJT_upbound, 10, interval, sinkansen_upbound);
-TSys.generateElevated(J_UJT_downbound, 10, interval);
+TSys.generateElevated(J_UJT_downbound, 10, interval, sinkansen_downbound);
+TSys.generateElevated(J_UJT_upbound, 10, interval);
 
 // TSys.generateElevated(JK_upbound, 10, interval);
 
