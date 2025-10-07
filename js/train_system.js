@@ -174,8 +174,7 @@ export class TrainSystem {
     const sampledPoints = this.getPointsEveryM(curve, interval);
     const obstacle = [];
     rotation = this.normalizeRad(rotation)
-    console.log(position)
-
+    
     let start_index = null
 
     for (let i = 0; i < sampledPoints.length; i++) {
@@ -231,11 +230,11 @@ export class TrainSystem {
         const obstacle_len = Math.sqrt(((Math.cos(obstacle_angle)/0.5) * Math.sin(obstacle_angle))**2 + 1)
 
         if (min_point != null){
-          console.log(min_point, obstacle_len, obstacle_angle)
-          console.log(Math.sqrt(((1 / Math.sin(obstacle_angle)) * Math.cos(obstacle_angle))**2 + 1))
+          // console.log(min_point, obstacle_len, obstacle_angle)
+          // console.log(Math.sqrt(((1 / Math.sin(obstacle_angle)) * Math.cos(obstacle_angle))**2 + 1))
           
-          console.log(min_point.x+Math.sin(rotation)*obstacle_len,min_point.z+Math.cos(rotation)*obstacle_len,min_point.y)
-          // this.Map_pin(min_point.x+Math.sin(rotation)*obstacle_len,min_point.z+Math.cos(rotation)*obstacle_len,min_point.y)
+          // console.log(min_point.x+Math.sin(rotation)*obstacle_len,min_point.z+Math.cos(rotation)*obstacle_len,min_point.y)
+          // // this.Map_pin(min_point.x+Math.sin(rotation)*obstacle_len,min_point.z+Math.cos(rotation)*obstacle_len,min_point.y)
           this.createBridgePillar(min_point.x+Math.sin(rotation)*obstacle_len, min_point.z+Math.cos(rotation)*obstacle_len, position.y);
           const avoid_point = {
             x: min_point.x+Math.sin(rotation)*obstacle_len,
@@ -274,7 +273,7 @@ export class TrainSystem {
       }
       
     }
-    console.log(obstacle)
+
     return obstacle;
   }
   

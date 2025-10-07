@@ -200,37 +200,6 @@
 
   <!-- モード切り替え -->
 
-  <button id="mode-change" class="control-button" style="right: 20px; top: 40px;">
-    <span class="icon-wrapper">
-      <span class="background-icon">🌐</span>
-      <span class="foreground-icon">🛠️</span>
-    </span>
-  </button>
-
-  <button id="edit-rotation" class="control-button" style="right: 20px; bottom: 40px;"> 
-    <span class="icon-wrapper">
-      <span class="background-icon">⏥</span>
-      <span class="foreground-icon">⤮</span>
-    </span>
-  </button>
-
-  <button id="create-pole" class="control-button" style="right: 95px; top: 40px; display: none;">
-    <span class="icon-wrapper">
-      <span class="background-icon"></span>
-      <span class="foreground-icon">⚡️</span>
-    </span>
-  </button>
-
-  <button id="draw-track" class="control-button" style="right: 170px; top: 40px; display: none;">
-    <span class="icon-wrapper">
-      <span class="background-icon"></span>
-      <span class="foreground-icon">🛤️</span>
-    </span>
-  </button>
-
-  <button id="track-create-new" class="control-button" style="right: 170px; top: 115px; display: none;">➕</button>
-  <button id="track-move-existing" class="control-button" style="right: 170px; top: 190px; display: none;">↔️</button>
-
   <button id="toggle-crossover" class="control-square-button" style="
     position: absolute;
     left: 20px;
@@ -259,6 +228,63 @@
     font-size: 16px;
     border-radius: 8px;
   ">🌙 夜にする</button>
+        
+<style>
+  #UiGroup {
+    position: relative; /* ここを基準にする */
+    width: 110px;
+    height: 560px;
+    border: 1px solid rgba(221, 221, 221, 0.2); /* 透明度 0.5 (=50%) */
+  }
+  #UiGroup button {
+    position: absolute; /* top が効くようにする */
+    left: 0;
+    width: 72px;
+    height: 28px;
+  }
+</style>
+
+<!-- モード切り替え -->
+<div id="UiGroup" style="position: fixed; top: 140px; left: 20px; z-index: 100;">
+  <button id = 'see' style = 'top: 10px;' > 🎦 </button>
+  <button id = 'edit' style = 'top: 40px;' > 🛠️ </button>
+  <button id = 'rail' style = 'top: 70px; left:10px;' > 🛤️ </button>
+  <button id = 'new' style = 'top: 100px; left:20px;' > + </button>
+  <button id = 'move' style = 'top: 130px; left:20px;' > 💫 </button>
+  <button id = 'x_z' style = 'top: 160px; left:30px;' > ⤮ </button>
+  <button id = 'y' style = 'top: 190px; left:30px;' > ⇡ </button>
+  <button id = 'poll' style = 'top: 220px; left:10px;' > ⚡️ </button>
+  <button id = 'new/2' style = 'top: 250px; left:20px;' > + </button>
+  <button id = 'move/2' style = 'top: 280px; left:20px;' > 💫 </button>
+  <button id = 'x_z/2' style = 'top: 310px; left:30px;' > ⤮ </button>
+  <button id = 'y/2' style = 'top: 340px; left:30px;' > ⇡ </button>
+  <button id = 'creat' style = 'top: 370px; left:10px;' > 🪄 </button>
+  <button id = 'sphere' style = 'top: 400px; left:20px;' > 🌐 </button>
+  <button id = 'cube' style = 'top: 430px; left:20px;' > 📦 </button>
+  <button id = 'pick' style = 'top: 460px; left:20px;' > 💫 </button>
+  <button id = 'x_z/3' style = 'top: 490px; left:30px;' > ⤮ </button>
+  <button id = 'y/3' style = 'top: 520px; left:30px;' > ⇡ </button>  
+  <!-- <button id = 'see' style = 'top: 10px; left: 0px;' > </button>
+  <button id = 'edit' style = 'top: 40px; left: 0px;' > </button>
+  <button id = 'rail' style = 'top: 70px; left: 10px;' > </button>
+  <button id = 'new' style = 'top: 100px; left: 20px;' > </button>
+  <button id = 'move' style = 'top: 130px; left: 20px;' > </button>
+  <button id = 'x_z' style = 'top: 160px; left: 30px;' > </button>
+  <button id = 'y' style = 'top: 190px; left: 30px;' > </button>
+  <button id = 'poll' style = 'top: 220px; left: 10px;' > </button>
+  <button id = 'new/2' style = 'top: 250px; left: 20px;' > </button>
+  <button id = 'move/2' style = 'top: 280px; left: 20px;' > </button>
+  <button id = 'x_z/2' style = 'top: 310px; left: 30px;' > </button>
+  <button id = 'y/2' style = 'top: 340px; left: 30px;' > </button>
+  <button id = 'creat' style = 'top: 370px; left: 10px;' > </button>
+  <button id = 'sphere' style = 'top: 400px; left: 20px;' > </button>
+  <button id = 'cube' style = 'top: 430px; left: 20px;' > </button>
+  <button id = 'pick' style = 'top: 460px; left: 20px;' > </button>
+  <button id = 'x_z/3' style = 'top: 490px; left: 30px;' > </button>
+  <button id = 'y/3' style = 'top: 520px; left: 30px;' > </button>
+     -->
+</div>
+</style>
 
   <!-- <button id = "logwindow" class="log-control-square-button" style="
   position: absolute;
@@ -290,6 +316,7 @@
   </footer>
   
   <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/ui_toggle.js"></script>
 
 </body>
 </html>

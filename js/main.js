@@ -631,6 +631,10 @@ function TrainSettings(
     const spacing = 6.95; // 車両の長さと同じだけ間隔を空ける
     car.position.z = - i * spacing;
 
+    // const light = new THREE.PointLight(0xffffff, 2, 3);
+    // light.position.set(0,0,0);
+    // car.add(light);
+
     if (i === 0){
       const headlight = new THREE.SpotLight(0xfff5e1, 7);
       headlight.angle = Math.PI / 8;
@@ -643,7 +647,11 @@ function TrainSettings(
       car.add(headlight);
       car.add(headlight.target);   // スポットライトはtargetが必須
       headlight.target.position.set(0, 0, 4);  // 向き（車両前方）に合わせて調整
-      
+
+      // const light = new THREE.PointLight(0xffffff, 3, 5);
+      // light.position.set(0,0,0);
+      // car.add(light);
+
     } 
     
     // ▼ パンタグラフ設置（例: 1, 4, 7 両目など）
@@ -717,11 +725,9 @@ async function runTrain(trainCars, root, track_doors, door_interval, max_speed=0
 
   const Equal_root = TSys.getPointsEveryM(root, 0.01); // spacing=0.1mごと（細かすぎたら25に）
 
-  console.log(Equal_root[0].y)
   for (let i=0; i < Equal_root.length; i+=1){
     Equal_root[i].y = Equal_root[i].y+0.95
   }
-  console.log(Equal_root[0].y)
 
   const totalPoints = Equal_root.length;
 
@@ -1794,18 +1800,6 @@ setMeshListOpacity(targetObjects, 0);
 //   targetObjects.push(cube);
 // }
 
-// モード切替関数
-function toggleMode(Btn,Ricons,Mode) {
-  Mode = (Mode + 1) % Ricons.length; // モードを順番に切替
-  const bgIcon = Btn.querySelector('.background-icon');
-  const fgIcon = Btn.querySelector('.foreground-icon');
-
-  bgIcon.textContent = Ricons[Mode].bg;
-  fgIcon.textContent = Ricons[Mode].fg;
-
-  return Mode
-}
-
 let pause = false;
 
 // すべてのボタンに hover 検出を付ける
@@ -1881,7 +1875,7 @@ function drawingObject(){
   if (targetObjects.length < 2){return}
   const Points = targetObjects.map(obj => obj.position.clone());
 
-  console.log(Points)
+  // console.log(Points)
 
   // 指定したポイントから線(線路の軌道)を生成
   const line = new THREE.CatmullRomCurve3(Points);
@@ -2245,143 +2239,13 @@ async function handleMouseDown() {
   }
 }
 
-const ModeChangeBtn = document.getElementById("mode-change")
-const createPoleBtn = document.getElementById('create-pole');
-const drawTrackBtn = document.getElementById('draw-track');
-
 // モード状態（例）
 let OperationMode = 0;
-// アイコンセット例
-const ModeRicons = [
-  { bg: '🌐', fg: '🛠️' }, // モード0
-  { bg: '🌐', fg: '🎦' }, // モード1
-]
 
 let polePlacementMode = false;
 let trackDrawingMode = false;
 // let trackEditSubMode = 'CREATE_NEW'; // 'CREATE_NEW' or 'MOVE_EXISTING'
-let objectEditMode = 'CREATE_NEW'; // 'CREATE_NEW' or 'MOVE_EXISTING'
-
-const trackCreateNewBtn = document.getElementById('track-create-new');
-const trackMoveExistingBtn = document.getElementById('track-move-existing');
-
-function deactivateAllModes() {
-  polePlacementMode = false;
-  trackDrawingMode = false;
-  createPoleBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-  drawTrackBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-  trackCreateNewBtn.style.display = "none";
-  trackMoveExistingBtn.style.display = "none";
-}
-
-function setObjectEditMode(mode) {
-  const before = mode
-  objectEditMode = mode;
-  if (objectEditMode === 'CREATE_NEW') {
-    trackCreateNewBtn.style.backgroundColor = 'rgba(255, 255, 0, 0.5)';
-    trackMoveExistingBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-    search_object = false
-  } else {
-    trackCreateNewBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-    trackMoveExistingBtn.style.backgroundColor = 'rgba(255, 255, 0, 0.5)';
-    if (objectEditMode === 'MOVE_EXISTING') { 
-      if (search_object != before){search_object = true; search_point();}}
-  }
-}
-
-trackCreateNewBtn.addEventListener('touchstart', () => setObjectEditMode('CREATE_NEW'));
-trackCreateNewBtn.addEventListener('click', () => setObjectEditMode('CREATE_NEW'));
-
-trackMoveExistingBtn.addEventListener('touchstart', () => setObjectEditMode('MOVE_EXISTING'));
-trackMoveExistingBtn.addEventListener('click', () => setObjectEditMode('MOVE_EXISTING'));
-
-createPoleBtn.addEventListener('touchstart', handleCreatePoleClick);
-createPoleBtn.addEventListener('click', handleCreatePoleClick);
-
-function handleCreatePoleClick() {
-  if (OperationMode !== 1) return;
-  polePlacementMode = !polePlacementMode;
-  trackDrawingMode = false;
-  if (polePlacementMode) {
-    createPoleBtn.style.backgroundColor = 'rgba(255, 255, 0, 0.5)';
-    drawTrackBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-  } else {
-    deactivateAllModes();
-  }
-}
-
-drawTrackBtn.addEventListener('touchstart', handleDrawTrackClick);
-drawTrackBtn.addEventListener('click', handleDrawTrackClick);
-
-function handleDrawTrackClick() {
-  if (OperationMode !== 1) return;
-  trackDrawingMode = !trackDrawingMode;
-  polePlacementMode = false;
-  search_object = false
-  if (trackDrawingMode) {
-    drawTrackBtn.style.backgroundColor = 'rgba(255, 255, 0, 0.5)';
-    createPoleBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-    trackCreateNewBtn.style.display = "block";
-    trackMoveExistingBtn.style.display = "block";
-  } else {
-    deactivateAllModes();
-  }
-}
-
-ModeChangeBtn.addEventListener("touchstart", handleModeChangeClick);
-ModeChangeBtn.addEventListener("click", handleModeChangeClick);
-
-function handleModeChangeClick() {
-  OperationMode = toggleMode(ModeChangeBtn,ModeRicons,OperationMode);
-  if (OperationMode === 1){
-    // 編集モード
-    createPoleBtn.style.display = "block";
-    drawTrackBtn.style.display = "block";
-    EditRBtn.style.display = "block";
-    search_object = true
-    move_direction_y = false
-    EditRmode = 0
-    EditRmode = toggleMode(EditRBtn,EditRicons,EditRmode);
-    setMeshListOpacity(targetObjects, 1);
-    if (objectEditMode === 'MOVE_EXISTING'){
-       search_object = true
-       search_point();
-    }
-    // search_point()
-  } else {
-    // 閲覧モード
-    createPoleBtn.style.display = "none";
-    drawTrackBtn.style.display = "none";
-    deactivateAllModes();
-    EditRBtn.style.display = "none";
-    search_object = false
-    choice_object = false
-    dragging = false
-    setMeshListOpacity(targetObjects, 0.0);
-  }
-}
-
-
-const EditRBtn = document.getElementById("edit-rotation")
-// モード状態（例）
-let EditRmode = 1;
-// アイコンセット例
-const EditRicons = [
-  { bg: '⏥', fg: '⤮' }, // モード0
-  { bg: '⏥', fg: '⇡' },  // モード1
-]
-
-EditRBtn.addEventListener("touchstart", handleEditRClick);
-EditRBtn.addEventListener("click", handleEditRClick);
-
-function handleEditRClick() {
-  move_direction_y = !move_direction_y
-  EditRmode = toggleMode(EditRBtn,EditRicons,EditRmode);
-}
-
-// 非表示
-EditRBtn.style.display = "none";
-
+let objectEditMode = 'Sandby'; // 'CREATE_NEW' or 'MOVE_EXISTING'
   
 // リサイズ変更
 window.addEventListener('resize', () => {
@@ -2390,6 +2254,110 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+export function UIevent (uiID, toggle){
+  if ( uiID === 'see' ){ if ( toggle === 'active' ){
+  console.log( 'see _active' )
+  OperationMode = 0
+  search_object = false
+  choice_object = false
+  dragging = false
+  setMeshListOpacity(targetObjects, 0.0);
+
+  } else {
+  console.log( 'see _inactive' )
+  }} else if ( uiID === 'edit' ){ if ( toggle === 'active' ){
+    console.log( 'edit _active' )
+    OperationMode = 1
+  } else {
+    console.log( 'edit _inactive' )
+  }} else if ( uiID === 'rail' ){ if ( toggle === 'active' ){
+    console.log( 'rail _active' +'_'+ search_object)
+    move_direction_y = false
+    setMeshListOpacity(targetObjects, 1);
+  } else {
+    console.log( 'rail _inactive' )
+    setMeshListOpacity(targetObjects, 0);
+    search_object = false
+    move_direction_y = false
+  }} else if ( uiID === 'new' ){ if ( toggle === 'active' ){
+    console.log( 'new _active' )
+    objectEditMode = 'CREATE_NEW'
+    trackDrawingMode = true
+  } else {
+    console.log( 'new _inactive' )
+    trackDrawingMode = false
+  }} else if ( uiID === 'move' ){ if ( toggle === 'active' ){
+    console.log( 'move _active' )
+    objectEditMode = 'MOVE_EXISTING'
+
+    search_object = true
+    search_point();
+
+  } else {
+    console.log( 'move _inactive' )
+    search_object = false
+    move_direction_y = false
+
+    objectEditMode = 'Sandby'
+
+  }} else if ( uiID === 'x_z' ){ if ( toggle === 'active' ){
+    console.log( 'x_z _active' )
+    move_direction_y = false
+  } else {
+    console.log( 'x_z _inactive' )
+    search_object = false
+  }} else if ( uiID === 'y' ){ if ( toggle === 'active' ){
+    console.log( 'y _active' )
+    move_direction_y = true
+  } else {
+    console.log( 'y _inactive' )
+    search_object = false
+  }} else if ( uiID === 'poll' ){ if ( toggle === 'active' ){
+  console.log( 'poll _active' )
+  } else {
+  console.log( 'poll _inactive' )
+  }} else if ( uiID === 'new/2' ){ if ( toggle === 'active' ){
+  console.log( 'new/2 _active' )
+  } else {
+  console.log( 'new/2 _inactive' )
+  }} else if ( uiID === 'move/2' ){ if ( toggle === 'active' ){
+  console.log( 'move/2 _active' )
+  } else {
+  console.log( 'move/2 _inactive' )
+  }} else if ( uiID === 'x_z/2' ){ if ( toggle === 'active' ){
+  console.log( 'x_z/2 _active' )
+  } else {
+  console.log( 'x_z/2 _inactive' )
+  }} else if ( uiID === 'y/2' ){ if ( toggle === 'active' ){
+  console.log( 'y/2 _active' )
+  } else {
+  console.log( 'y/2 _inactive' )
+  }} else if ( uiID === 'creat' ){ if ( toggle === 'active' ){
+  console.log( 'creat _active' )
+  } else {
+  console.log( 'creat _inactive' )
+  }} else if ( uiID === 'sphere' ){ if ( toggle === 'active' ){
+  console.log( 'sphere _active' )
+  } else {
+  console.log( 'sphere _inactive' )
+  }} else if ( uiID === 'cube' ){ if ( toggle === 'active' ){
+  console.log( 'cube _active' )
+  } else {
+  console.log( 'cube _inactive' )
+  }} else if ( uiID === 'pick' ){ if ( toggle === 'active' ){
+  console.log( 'pick _active' )
+  } else {
+  console.log( 'pick _inactive' )
+  }} else if ( uiID === 'x_z/3' ){ if ( toggle === 'active' ){
+  console.log( 'x_z/3 _active' )
+  } else {
+  console.log( 'x_z/3 _inactive' )
+  }} else if ( uiID === 'y/3' ){ if ( toggle === 'active' ){
+  console.log( 'y/3 _active' )
+  } else {
+  console.log( 'y/3 _inactive' )
+  }}
+}
 
 // 視点操作
 // カメラ操作 ----------------------------------------------------------------
