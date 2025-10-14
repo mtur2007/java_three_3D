@@ -2,18 +2,13 @@
 import { UIevent } from './main.js';
 
 function toggleProcessing(uiIDs,next_nest){
+    
+    // 無効化
     UiGroup.querySelectorAll('button').forEach(b => {
         // console.log(b.id)
         const active = uiIDs.includes(b.id);
         const next = next_nest.includes(b.id);
-        if (active) {
-            b.hidden = false; // 表示
-            if(UisToggle[b.id] === 'inactive'){
-                // console.log('runn')
-                UisToggle[b.id] = 'active'
-                UIevent (b.id, 'active')
-            }
-        } else {
+        if (!active) {
             b.hidden = true; // 非表示
             if(UisToggle[b.id] === 'active'){
                 // console.log('ruuu')
@@ -24,6 +19,20 @@ function toggleProcessing(uiIDs,next_nest){
 
         if (next){
             b.hidden = false; // 表示
+        }
+    })
+
+    // 有効化
+    UiGroup.querySelectorAll('button').forEach(b => {
+        // console.log(b.id)
+        const active = uiIDs.includes(b.id);
+        if (active) {
+            b.hidden = false; // 表示
+            if(UisToggle[b.id] === 'inactive'){
+                // console.log('runn')
+                UisToggle[b.id] = 'active'
+                UIevent (b.id, 'active')
+            }
         }
     })
 }
@@ -141,7 +150,8 @@ const uiTree = {
         'creat':{
             'sphere':'',
             'cube':'',
-            'pick':{'x_z':'', 'y':''}
+            'pick':'',
+            'move':{'x_z':'', 'y':''}
         }
     }
 }

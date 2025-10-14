@@ -1,45 +1,66 @@
-// functions.js
+// main.js
 
 // モバイルデバッグ用　ログ画面出力
 
 // const ctrl = document.getElementById('controller');
-// let logwindow = document.getElementById("logwindow");
-// let text = ''
 
-// function alert(txt){
-//   text += txt+'\n'
-//   logwindow.innerText = keepLastNLines(text)
-// }
+let logwindow = document.getElementById("logwindow");
+logwindow.hidden = true
 
-// function keepLastNLines(text, maxLines = 20, options = {}) {
-//   const {
-//     treatEscapedNewline = false,
-//     normalizeLineEndings = true,
-//     joinWith = '\n'
-//   } = options;
+const log_hidden = document.getElementById("log");
 
-//   if (text == null) return '';
+let text = ''
 
-//   let s = String(text);
+function alert(txt){
+  text += txt+'\n'
+  logwindow.innerText = txt//keepLastNLines(text)
+}
 
-//   // オプション: "\\n" を実改行に変換
-//   if (treatEscapedNewline) {
-//     s = s.replace(/\\r\\n/g, '\r\n').replace(/\\r/g, '\r').replace(/\\n/g, '\n');
-//   }
+function keepLastNLines(text, maxLines = 20, options = {}) {
+  const {
+    treatEscapedNewline = false,
+    normalizeLineEndings = true,
+    joinWith = '\n'
+  } = options;
 
-//   // 改行をLFに正規化
-//   if (normalizeLineEndings) {
-//     s = s.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
-//          .replace(/\u2028/g, '\n').replace(/\u2029/g, '\n').replace(/\u0085/g, '\n');
-//   }
+  if (text == null) return '';
 
-//   const lines = s.split('\n'); // 空行も 1 行としてカウント
-//   if (lines.length <= maxLines) return lines.join(joinWith);
+  let s = String(text);
 
-//   // 末尾 maxLines を残す（先頭の余分を削除）
-//   const kept = lines.slice(lines.length - maxLines);
-//   return kept.join(joinWith);
-// }
+  // オプション: "\\n" を実改行に変換
+  if (treatEscapedNewline) {
+    s = s.replace(/\\r\\n/g, '\r\n').replace(/\\r/g, '\r').replace(/\\n/g, '\n');
+  }
+
+  // 改行をLFに正規化
+  if (normalizeLineEndings) {
+    s = s.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+         .replace(/\u2028/g, '\n').replace(/\u2029/g, '\n').replace(/\u0085/g, '\n');
+  }
+
+  const lines = s.split('\n'); // 空行も 1 行としてカウント
+  if (lines.length <= maxLines) return lines.join(joinWith);
+
+  // 末尾 maxLines を残す（先頭の余分を削除）
+  const kept = lines.slice(lines.length - maxLines);
+  return kept.join(joinWith);
+}
+
+log_hidden.addEventListener("touchstart", () => {
+  if (logwindow.hidden){
+    let txt = ''
+    const max_len = 10
+    for (let i = 0; i < group_targetObjects.length; i++){
+      const cdnt_0 = group_targetObjects[i][0].position
+      const cdnt_1 = group_targetObjects[i][1].position
+
+      txt += '['+ i + '] { x: '+String(cdnt_0.x).slice(0, max_len) +', y: ' +String(cdnt_0.y).slice(0, max_len)+', z: ' +String(cdnt_0.z).slice(0, max_len) + '},'
+      txt += '{ x: '+String(cdnt_1.x).slice(0, max_len) +', y: ' +String(cdnt_1.y).slice(0, max_len)+', z: ' +String(cdnt_1.z).slice(0, max_len) + '}\n'
+    }
+    alert(txt)
+  }
+  logwindow.hidden = !logwindow.hidden
+});
 
 import * as THREE from 'three';
 
@@ -1239,11 +1260,11 @@ const wall_track4 = findCurveRange(line_4, station_s, wall_f)
 const tunnel_1 = findCurveRange(line_4, wall_f, tunnel_f)
 const tunnel_2 = findCurveRange(line_4, wall_f, tunnel_f)
 
-TSys.createTrack(line_1, 1.83, 0xff0000)
-TSys.createTrack(line_2, 1.83, 0x772200)
+TSys.createTrack(line_1, 1.83, 0x000000)
+TSys.createTrack(line_2, 1.83, 0x000000)
 
-TSys.createTrack(line_3, 1.83, 0x002277)
-TSys.createTrack(line_4, 1.83, 0x0000ff)
+TSys.createTrack(line_3, 1.83, 0x000000)
+TSys.createTrack(line_4, 1.83, 0x000000)
 
 // 高架(柱/床版)を生成
 const interval = 1
@@ -1630,7 +1651,7 @@ cameraSub.lookAt(0, 0, 0);
 const cube_geometry = new THREE.BoxGeometry();
 const cube_material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
 const cube = new THREE.Mesh(cube_geometry, cube_material);
-const targetObjects = [];
+let targetObjects = [];
 const targetPins = [];
 
 // 線描画
@@ -1790,8 +1811,8 @@ TSys.generateElevated(J_UJT_upbound, 10, interval);
 
 // レイキャストを作成
 const raycaster = new THREE.Raycaster();
-resetMeshListOpacity(targetObjects, JK_downbound_point);
-setMeshListOpacity(targetObjects, 0);
+// resetMeshListOpacity(targetObjects, JK_downbound_point);
+// setMeshListOpacity(targetObjects, 0);
 
 // for (let i = 1; i < 4; i++) {
 //   const cube = new THREE.Mesh(geometry, material.clone()); // 色変更できるようにclone
@@ -1871,8 +1892,9 @@ function visual_object(targets=[]){
 
 function drawingObject(){
 
-  clean_object(['DeckSlab','Pillar','Rail'])
+  clean_object(['DeckSlab','Pillar','Rail','OBJECT' + group_EditNow])
   if (targetObjects.length < 2){return}
+
   const Points = targetObjects.map(obj => obj.position.clone());
 
   // console.log(Points)
@@ -1882,8 +1904,18 @@ function drawingObject(){
 
 
   // TSys.generateElevated(line, 5, 1);
-  TSys.createRail(line, true)
-  // TSys.createTrack(line, 0x00ff00)
+  if (editObject === 'ORIGINAL'){
+    if (dragging){
+      TSys.createTrack(line, 0, 0x00ff00, 'Rail')
+    } else {
+      const mesh = TSys.createBoxBetweenPoints3D(Points[0], Points[1], 0.1, 0.1)
+      mesh.name = 'OBJECT' + group_EditNow
+      group_object[group_EditNow] = mesh
+      scene.add(mesh)
+    }
+  }else{
+    TSys.createRail(line, true)
+  }
   // console.log(positions); // [Vector3, Vector3, ...]
 }
 
@@ -1914,6 +1946,10 @@ GuideGrid_Center_x.visible = false
 GuideGrid_Center_z.visible = false
 
 console.log(new THREE.Vector3(5.5, y, -50))
+
+let group_object = []
+let group_targetObjects = []
+let group_EditNow = 'None'
 
 let choice_object = false
 let search_object = false
@@ -1982,6 +2018,27 @@ async function onerun_search_point() {
   // 画面上の光線とぶつかったオブジェクトを得る
   const intersects = getIntersectObjects();
 
+  if (objectEditMode === 'PICK' && intersects.length > 0) {
+    const hit = intersects[0];           // 一番近いヒット
+    console.log('hit.object =', hit.object);
+
+    // top-level の targetObjects の要素を見つける（子メッシュから親を辿る）
+    let top = hit.object;
+    while (top && !targetObjects.includes(top)) {
+      top = top.parent;                  // parent を辿っていく
+    }
+
+    const idx = top ? targetObjects.indexOf(top) : -1; // 見つからなければ -1
+    console.log('targetObjects のインデックス:', idx);
+    group_EditNow = idx
+
+    // InstancedMesh の場合は instanceId があるかチェック
+    if ('instanceId' in hit && hit.instanceId !== undefined) {
+      console.log('InstancedMesh のインスタンス番号:', hit.instanceId);
+      group_EditNow = hit.instanceId
+    }
+  }
+
   if (intersects.length > 0) {
     if (choice_object != intersects[0].object){
       if (choice_object !== false){ 
@@ -2005,6 +2062,7 @@ async function onerun_search_point() {
         GuideGrid.visible = true
       }
     }
+  
 
   } else {
     if (choice_object !== false){choice_object.material.color.set(0xff0000)}
@@ -2019,7 +2077,6 @@ async function onerun_search_point() {
   renderer.render(scene, camera);
   return choice_object;
 }
-
 
 function coord_DisplayTo3D(Axis_num=false){
 
@@ -2058,7 +2115,7 @@ function coord_DisplayTo3D(Axis_num=false){
   } else {
     raycaster.setFromCamera(mouse, camera);
     const dir = raycaster.ray.direction
-
+    
     const diff = {x: Axis_num.x - pos.x, z: Axis_num.z - pos.z}
     const hypotenuse = Math.cos(Math.atan2(diff.x, diff.z) - cameraAngleY) * Math.sqrt(diff.x**2 + diff.z**2)
     
@@ -2082,6 +2139,7 @@ function coord_DisplayTo3D(Axis_num=false){
     );
 
     point.y += TargetDiff
+
   }
   return point
 }
@@ -2116,7 +2174,7 @@ async function handleMouseUp(mobile = false) {
 
   if (pause){return};
 
-  if (OperationMode === 1 && objectEditMode === 'MOVE_EXISTING'){
+  if (OperationMode === 1 && (objectEditMode === 'MOVE_EXISTING' || objectEditMode === '')){
   
     if (dragging != false){
       
@@ -2133,6 +2191,7 @@ async function handleMouseUp(mobile = false) {
 
         // console.log(targetObjects)
 
+        // if (editObject === 'ORIGINAL'){}
         choice_object.position.set(point.x,point.y,point.z)
         choice_object.material.color.set(0xff0000) // Reset color to red
       }
@@ -2160,6 +2219,8 @@ async function handleMouseUp(mobile = false) {
   
 async function handleMouseDown() {
   if (pause || OperationMode != 1) { return; }
+
+  console.log('run')
   
   // 架線柱配置モード
   if (polePlacementMode) {
@@ -2170,18 +2231,51 @@ async function handleMouseDown() {
     deactivateAllModes(); // 配置後に全モードを解除
     return;} 
   
-    // 線路描画モード
-  if (trackDrawingMode && objectEditMode === 'CREATE_NEW') {
+  // 新規作成モード
+  if (objectEditMode === 'CREATE_NEW') {
+
     const point = coord_DisplayTo3D();
     const cube_clone = new THREE.Mesh(cube_geometry, cube_material.clone());
-    cube_clone.position.set(point.x, point.y, point.z);
-    scene.add(cube_clone);
-    targetObjects.push(cube_clone);
+    if (editObject === 'RAIL'){
+      cube_clone.position.set(point.x, point.y, point.z);
+      scene.add(cube_clone);
+      targetObjects.push(cube_clone);
+
+    } else if (editObject === 'ORIGINAL'){
+      
+      if (group_EditNow != 'None'){
+        group_targetObjects[group_EditNow][0].visible = false;
+        group_targetObjects[group_EditNow][1].visible = false;
+      }
+
+      group_EditNow = group_object.length
+      group_object.push([])
+      group_targetObjects.push([false,false])
+      targetObjects = []
+
+      // 1つずつ複製して位置を指定する
+      const c1 = new THREE.Mesh(cube_geometry, cube_material.clone());
+      c1.position.set(point.x, point.y, point.z);
+      scene.add(c1);
+      targetObjects.push(c1);
+      group_targetObjects[group_EditNow][0] = c1
+
+      const c2 = new THREE.Mesh(cube_geometry, cube_material.clone())
+      c2.position.set(point.x, point.y + 3, point.z); // 元の cube_clone を変更しない
+      scene.add(c2);
+      targetObjects.push(c2);
+      group_targetObjects[group_EditNow][1] = c2
+
+      console.log(targetObjects)
+    }
+
     drawingObject();
-    return;}
-  
+    return;
+
+  }
+
   // 通常のオブジェクト選択・移動モード
-  if (objectEditMode === 'MOVE_EXISTING'){
+  if (objectEditMode === 'MOVE_EXISTING' || objectEditMode === 'PICK'){
 
     search_object = false
     await sleep(100);
@@ -2191,49 +2285,61 @@ async function handleMouseDown() {
       return;
     }
 
-    const pos = camera.position
-    if (move_direction_y === false){
-      let set_y = choice_object.position.y
+    if (objectEditMode === 'MOVE_EXISTING'){
+      
+      search_object = false
+      await sleep(100);
+  
+      const answer = await onerun_search_point();
+      if (answer === false){
+        return;
+      }  
 
-      raycaster.setFromCamera(mouse, camera);
-      const dir = raycaster.ray.direction
+      const pos = camera.position
+      if (move_direction_y === false){
+        let set_y = choice_object.position.y
 
-      const t = Math.abs((pos.y - set_y)/dir.y)
-      
-      // 交点を計算
-      TargetDiff = [
-        choice_object.position.x - (pos.x + dir.x * t),
-        choice_object.position.z - (pos.z + dir.z * t)
-      ];
-    } else {
-      raycaster.setFromCamera(mouse, camera);
-      const dir = raycaster.ray.direction
+        raycaster.setFromCamera(mouse, camera);
+        const dir = raycaster.ray.direction
 
-      const mouAngleY = cameraAngleY - Math.atan2(dir.x,dir.z) // マウスを3d世界の座標のベクトルに変換
-      const diff = {x: choice_object.position.x - pos.x, z: choice_object.position.z - pos.z}
-      const hypotenuse = Math.cos(Math.atan2(diff.x, diff.z) - cameraAngleY) * Math.sqrt(diff.x**2 + diff.z**2)
+        const t = Math.abs((pos.y - set_y)/dir.y)
+        
+        // 交点を計算
+        TargetDiff = [
+          choice_object.position.x - (pos.x + dir.x * t),
+          choice_object.position.z - (pos.z + dir.z * t)
+        ];
+      } else {
+        raycaster.setFromCamera(mouse, camera);
+        const dir = raycaster.ray.direction
+
+        const mouAngleY = cameraAngleY - Math.atan2(dir.x,dir.z) // マウスを3d世界の座標のベクトルに変換
+        const diff = {x: choice_object.position.x - pos.x, z: choice_object.position.z - pos.z}
+        const hypotenuse = Math.cos(Math.atan2(diff.x, diff.z) - cameraAngleY) * Math.sqrt(diff.x**2 + diff.z**2)
+        
+        // console.log('• • : '+'x, '+diff.x+'z, '+diff.z)
+        // console.log('•-• : '+hypotenuse)
+        // console.log('_./ : '+mouAngleY + ' x,'+ Math.sin(mouAngleY) + ' y,'+Math.cos(mouAngleY))
+        // console.log('--,-: '+(hypotenuse/Math.cos(mouAngleY))*Math.cos(mouAngleY),hypotenuse/Math.cos(mouAngleY)*dir.y)
+        
+        const t = hypotenuse/(Math.cos(cameraAngleY)*dir.z+Math.sin(cameraAngleY)*dir.x)//,dir.z
+        
+        // console.log('/ : '+hypotenuse+' '+Math.floor(Math.cos(cameraAngleY)*dir.z+Math.sin(cameraAngleY)*dir.x))
+        // console.log('t : '+t)
       
-      // console.log('• • : '+'x, '+diff.x+'z, '+diff.z)
-      // console.log('•-• : '+hypotenuse)
-      // console.log('_./ : '+mouAngleY + ' x,'+ Math.sin(mouAngleY) + ' y,'+Math.cos(mouAngleY))
-      // console.log('--,-: '+(hypotenuse/Math.cos(mouAngleY))*Math.cos(mouAngleY),hypotenuse/Math.cos(mouAngleY)*dir.y)
+        // 交点を計算
+        TargetDiff = choice_object.position.y - (pos.y + dir.y * t) 
+      }
+
+      choice_object.material.color.set(0x0000ff)
       
-      const t = hypotenuse/(Math.cos(cameraAngleY)*dir.z+Math.sin(cameraAngleY)*dir.x)//,dir.z
+      dragging = true;
       
-      // console.log('/ : '+hypotenuse+' '+Math.floor(Math.cos(cameraAngleY)*dir.z+Math.sin(cameraAngleY)*dir.x))
-      // console.log('t : '+t)
+      GuideLine.visible = true
+      if (!move_direction_y){
+        GuideGrid.visible = true
+      }
     
-      // 交点を計算
-      TargetDiff = choice_object.position.y - (pos.y + dir.y * t) 
-    }
-
-    choice_object.material.color.set(0x0000ff)
-    
-    dragging = true;
-    
-    GuideLine.visible = true
-    if (!move_direction_y){
-      GuideGrid.visible = true
     }
 
   }
@@ -2243,10 +2349,10 @@ async function handleMouseDown() {
 let OperationMode = 0;
 
 let polePlacementMode = false;
-let trackDrawingMode = false;
+let editObject = 'Standby'
 // let trackEditSubMode = 'CREATE_NEW'; // 'CREATE_NEW' or 'MOVE_EXISTING'
-let objectEditMode = 'Sandby'; // 'CREATE_NEW' or 'MOVE_EXISTING'
-  
+let objectEditMode = 'Standby'; // 'CREATE_NEW' or 'MOVE_EXISTING'
+
 // リサイズ変更
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth/window.innerHeight;
@@ -2256,15 +2362,15 @@ window.addEventListener('resize', () => {
 
 export function UIevent (uiID, toggle){
   if ( uiID === 'see' ){ if ( toggle === 'active' ){
-  console.log( 'see _active' )
-  OperationMode = 0
-  search_object = false
-  choice_object = false
-  dragging = false
-  setMeshListOpacity(targetObjects, 0.0);
+    console.log( 'see _active' )
+    OperationMode = 0
+    search_object = false
+    choice_object = false
+    dragging = false
+    setMeshListOpacity(targetObjects, 0.0);
 
   } else {
-  console.log( 'see _inactive' )
+    console.log( 'see _inactive' )
   }} else if ( uiID === 'edit' ){ if ( toggle === 'active' ){
     console.log( 'edit _active' )
     OperationMode = 1
@@ -2274,18 +2380,23 @@ export function UIevent (uiID, toggle){
     console.log( 'rail _active' +'_'+ search_object)
     move_direction_y = false
     setMeshListOpacity(targetObjects, 1);
+    editObject = 'RAIL'
+ 
   } else {
     console.log( 'rail _inactive' )
     setMeshListOpacity(targetObjects, 0);
     search_object = false
     move_direction_y = false
+    editObject = 'Standby'
+
   }} else if ( uiID === 'new' ){ if ( toggle === 'active' ){
     console.log( 'new _active' )
     objectEditMode = 'CREATE_NEW'
-    trackDrawingMode = true
+    search_object = false
+
   } else {
     console.log( 'new _inactive' )
-    trackDrawingMode = false
+
   }} else if ( uiID === 'move' ){ if ( toggle === 'active' ){
     console.log( 'move _active' )
     objectEditMode = 'MOVE_EXISTING'
@@ -2298,7 +2409,7 @@ export function UIevent (uiID, toggle){
     search_object = false
     move_direction_y = false
 
-    objectEditMode = 'Sandby'
+    objectEditMode = 'Standby'
 
   }} else if ( uiID === 'x_z' ){ if ( toggle === 'active' ){
     console.log( 'x_z _active' )
@@ -2334,28 +2445,98 @@ export function UIevent (uiID, toggle){
   console.log( 'y/2 _inactive' )
   }} else if ( uiID === 'creat' ){ if ( toggle === 'active' ){
   console.log( 'creat _active' )
+    // const tilt = [
+    // new THREE.Vector3(1, 10, -4),
+    // new THREE.Vector3(0, 10, -2),
+    // ]
+    // const pos = new THREE.CatmullRomCurve3(tilt);
+    // resetMeshListOpacity(targetObjects, tilt);
+    // setMeshListOpacity(targetObjects, 1);
+
+    // TSys.createTrack(pos,0,0xff0000)
+
+    editObject = 'ORIGINAL'
+    targetObjects = group_object
+    setMeshListOpacity(targetObjects, 1);
+
   } else {
-  console.log( 'creat _inactive' )
+    console.log( 'creat _inactive' )
+    // targetObjects = []
+    setMeshListOpacity(targetObjects, 0);
+    editObject = 'Standby'
+
   }} else if ( uiID === 'sphere' ){ if ( toggle === 'active' ){
   console.log( 'sphere _active' )
   } else {
   console.log( 'sphere _inactive' )
   }} else if ( uiID === 'cube' ){ if ( toggle === 'active' ){
-  console.log( 'cube _active' )
+    console.log( 'cube _active' )
+    objectEditMode = 'CREATE_NEW'
+    search_object = false
+    targetObjects = []
+    setMeshListOpacity(targetObjects, 1);
+
   } else {
-  console.log( 'cube _inactive' )
+    console.log( 'cube _inactive' )
+    // if (group_EditNow != 'None'){
+    //   console.log('bisible')
+    //   group_targetObjects[group_EditNow][0].visible = false;
+    //   group_targetObjects[group_EditNow][1].visible = false;
+    // }
+
+    console.log('false; '+targetObjects)
+    setMeshListOpacity(targetObjects, 0);
+
   }} else if ( uiID === 'pick' ){ if ( toggle === 'active' ){
-  console.log( 'pick _active' )
+    console.log( 'pick _active' )
+    objectEditMode = 'PICK'
+
+    search_object = true
+
+    targetObjects = group_object
+    setMeshListOpacity(targetObjects, 1);
+    search_point();
+
   } else {
-  console.log( 'pick _inactive' )
+    console.log( 'pick _inactive' )
+
+    search_object = false
+    move_direction_y = false
+
+    objectEditMode = 'Standby'
+
+  }} else if ( uiID === 'move/3' ){ if ( toggle === 'active' ){
+    console.log( 'move/3 _active' )
+    objectEditMode = 'MOVE_EXISTING'
+
+    targetObjects = group_targetObjects[group_EditNow]
+    setMeshListOpacity(targetObjects, 1);
+
+    search_object = true
+    search_point();
+
+  } else {
+    console.log( 'move/3 _inactive' )
+    search_object = false
+    move_direction_y = false
+    setMeshListOpacity(targetObjects, 0);
+
+    objectEditMode = 'Standby'
+
   }} else if ( uiID === 'x_z/3' ){ if ( toggle === 'active' ){
-  console.log( 'x_z/3 _active' )
+    console.log( 'x_z/3 _active' )
+    move_direction_y = false
   } else {
-  console.log( 'x_z/3 _inactive' )
+    console.log( 'x_z/3 _inactive' )
+;
   }} else if ( uiID === 'y/3' ){ if ( toggle === 'active' ){
-  console.log( 'y/3 _active' )
+    console.log( 'y/3 _active' )
+    move_direction_y = true
+    
   } else {
-  console.log( 'y/3 _inactive' )
+    console.log( 'y/3 _inactive' )
+    search_object = false
+  
   }}
 }
 
@@ -2536,13 +2717,13 @@ document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
 document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
 
 // ========== カメラ制御変数 ========== //
-let cameraAngleY = 180 * Math.PI / 180;  // 水平回転
+let cameraAngleY = 0 * Math.PI / 180;  // 水平回転
 let cameraAngleX = -10 * Math.PI / 180;  // 垂直回転
 let moveVectorX = 0
 let moveVectorZ = 0
 
 camera.position.y += 15
-camera.position.z = -13
+camera.position.z = -10//-13
 // ========== ボタン UI ========== //
 // 状態フラグ
 let speedUp = false;
@@ -2672,8 +2853,8 @@ function animate() {
     // サブカメラ：画面右下に小さく表示
     const insetWidth = window.innerWidth / 4;  // 画面幅の1/4サイズ
     const insetHeight = window.innerHeight / 4; // 画面高の1/4サイズ
-    const insetX = 10; // 右下から10pxマージン
-    const insetY = window.innerHeight - insetHeight - 10; // 下から10pxマージン
+    const insetX = 110; // 右下から10pxマージン
+    const insetY = window.innerHeight - insetHeight - 100; // 下から10pxマージン
 
     renderer.setViewport(insetX, insetY, insetWidth, insetHeight);
     renderer.setScissor(insetX, insetY, insetWidth, insetHeight);

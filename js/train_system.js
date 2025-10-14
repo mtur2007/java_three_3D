@@ -287,17 +287,17 @@ export class TrainSystem {
   }
   
   // 線路表示
-  createTrack(curve, pointy ,color = 0x333333, name=false) {
+  createTrack(curve, pointy ,color = 0x000000, name=false) {
     const points = curve.getPoints(100);
     // すべての点にY座標を追加 or 修正（例：Y=1.5）
     for (let i = 0; i < points.length; i++) {
       points[i].y += pointy;
     }
     const geom = new THREE.BufferGeometry().setFromPoints(points);
-    const mat = new THREE.LineBasicMaterial({ color: 0x000000 });
+    const mat = new THREE.LineBasicMaterial({ color: color });
     const line = new THREE.Line(geom, mat);
-    if (name){
-      line.name = 'Rail'
+    if (name != false){
+      line.name = name
     }
     this.scene.add(line);
   }  
